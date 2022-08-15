@@ -31,6 +31,7 @@ function setVariables()
     configuration { "Final" }
         flags { "Optimize", "OptimizeSpeed", "NoEditAndContinue", "No64BitChecks" }   
         defines { "IS_DEBUG=0", "IS_RELEASE=0", "IS_FINAL=1" }
+    configuration {}
 end
 
 function setExternIncludes()
@@ -53,13 +54,13 @@ function odysseyProject()
     setExternIncludes()
 
     includedirs { ENGINE_DIR .. "/include"}
-    includedirs { ENGINE_DIR .. "/src"}
 end
 
 project "odyssey"
     kind "StaticLib"
     language "C++"
 
+    includedirs { ENGINE_DIR .. "/include"}
     includedirs { ENGINE_DIR .. "/src"}
 
     files 
@@ -74,5 +75,5 @@ project "odyssey"
     end
     links "imgui"
 
-    setVariables()
     setExternIncludes()
+    setVariables()

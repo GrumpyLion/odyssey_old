@@ -10,7 +10,8 @@ extern Game* CreateGame();
 int main()
 {
 	Game* game = CreateGame();
-
+	Engine engine = Engine(game);
+	engine.Run();
 	return 0;
 }
 

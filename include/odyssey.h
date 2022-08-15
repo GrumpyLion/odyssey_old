@@ -1,4 +1,9 @@
 #pragma once
 
-#include "defines.h"
-#include "game.h"
+#include "odyssey/defines.h"
+#include "odyssey/game.h"
+#include "odyssey/core/engine.h"
+
+// External
+//
+#include "glm/glm.hpp"

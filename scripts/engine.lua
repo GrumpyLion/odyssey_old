@@ -1,10 +1,18 @@
 ENGINE_DIR = path.getabsolute("..")
 
-function setVariablesWindows()
+group "extern"
+dofile(ENGINE_DIR .. "/extern/glm/glm.lua")
+dofile(ENGINE_DIR .. "/extern/imgui/imgui.lua")
+if platform == "x64" then
+    dofile(ENGINE_DIR .. "/extern/glfw/glfw.lua")
+end
+group "game"
+
+function setVariables()
     platforms { "x64" }
     targetdir "../bin"
     debugdir "../bin"
-    defines { "IS_WINDOWS_PLATFORM=1" }
+    defines { "IS_WINDOWS_PLATFORM=1" } 
 
     if (os.is("Windows")) then flags {"StaticRuntime"} end
     if (os.is("Windows")) then defines { "_CRT_SECURE_NO_WARNINGS" } end    
@@ -25,13 +33,28 @@ function setVariablesWindows()
         defines { "IS_DEBUG=0", "IS_RELEASE=0", "IS_FINAL=1" }
 end
 
+function setExternIncludes()
+    if platform == "x64" then
+        includeGLFW()
+    end
+
+    includeGLM()
+    includeImGUI()
+end
+
 function odysseyProject()
     links "odyssey"
+
+    if platform == "x64" then
+        links "glfw"
+    end
+    links "imgui"
+
+    setExternIncludes()
 
     includedirs { ENGINE_DIR .. "/include"}
     includedirs { ENGINE_DIR .. "/src"}
 end
-
 
 project "odyssey"
     kind "StaticLib"
@@ -39,10 +62,17 @@ project "odyssey"
 
     includedirs { ENGINE_DIR .. "/src"}
 
-    files {
+    files 
+    {
         "../src/**.c*",
         "../src/**.h*",
         "../include/**.h*"
     }
 
-    setVariablesWindows()
+    if platform == "x64" then
+        links "glfw"
+    end
+    links "imgui"
+
+    setVariables()
+    setExternIncludes()

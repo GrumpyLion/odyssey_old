@@ -14,7 +14,7 @@ function setVariables()
     debugdir "../bin"
     defines { "IS_WINDOWS_PLATFORM=1" } 
 
-    if (os.is("Windows")) then flags {"StaticRuntime"} end
+    flags { "StaticRuntime" }
     if (os.is("Windows")) then defines { "_CRT_SECURE_NO_WARNINGS" } end    
 
     configuration { "x64", "Debug" }
@@ -37,6 +37,7 @@ end
 function setExternIncludes()
     if platform == "x64" then
         includeGLFW()
+        includedirs { "$(VULKAN_SDK)" .. "/Include" }
     end
 
     includeGLM()

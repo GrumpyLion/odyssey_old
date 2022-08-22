@@ -2,6 +2,7 @@ ENGINE_DIR = path.getabsolute("..")
 
 group "extern"
 dofile(ENGINE_DIR .. "/extern/glm/glm.lua")
+dofile(ENGINE_DIR .. "/extern/spdlog/spdlog.lua")
 dofile(ENGINE_DIR .. "/extern/imgui/imgui.lua")
 if platform == "x64" then
     dofile(ENGINE_DIR .. "/extern/glfw/glfw.lua")
@@ -41,6 +42,7 @@ function setExternIncludes()
     end
 
     includeGLM()
+    includeSpdlog()
     includeImGUI()
 end
 

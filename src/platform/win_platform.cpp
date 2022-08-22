@@ -1,3 +1,0 @@
-#if IS_WINDOWS_PLATFORM
-
-#endif

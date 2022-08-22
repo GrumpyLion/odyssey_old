@@ -18,7 +18,7 @@ namespace Odyssey
 
 		virtual void Update(float delta) = 0;
 		virtual void Render(float delta) = 0;
-		virtual const char* getName() = 0;
+		virtual const char* GetName() = 0;
 
 	protected:
 		Engine* myEngine{};

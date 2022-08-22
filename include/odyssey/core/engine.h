@@ -1,6 +1,7 @@
 namespace Odyssey
 {
 	class Game;
+	class PlatformLayer;
 
 	class Engine
 	{

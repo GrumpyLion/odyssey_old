@@ -1,5 +1,6 @@
 #pragma once
 
+#include "platform/win_platform_layer.h"
 #include "game.h"
 using namespace Odyssey;
 
@@ -9,6 +10,7 @@ extern Game* CreateGame();
 
 int main()
 {
+	PlatformLayer::SetImpl(new WindowsPlatform());
 	Game* game = CreateGame();
 	Engine engine = Engine(game);
 	engine.Run();

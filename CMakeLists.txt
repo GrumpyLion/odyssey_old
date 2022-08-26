@@ -40,7 +40,6 @@ set(SOURCES
     "src/core/logger.cpp"
 
     "src/platform/platform_layer.cpp"
-    "src/platform/win_platform_layer.cpp"
     )
 
 set(HEADERS
@@ -48,26 +47,32 @@ set(HEADERS
 
     "include/odyssey/defines.h"
     "include/odyssey/game.h"
-    "include/odyssey/win_entry.h"
     
     "include/odyssey/core/assert.h"
     "include/odyssey/core/engine.h"
     "include/odyssey/core/logger.h"
 
     "include/odyssey/platform/platform_layer.h"
-    "include/odyssey/platform/win_platform_layer.h"
     )
-
-assign_source_group(${SOURCES})
-assign_source_group(${HEADERS})
 
 if (IS_WINDOWS)
     add_definitions(-DIS_WINDOWS_PLATFORM=1)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+
+    set(SOURCES ${SOURCES}
+        "src/platform/win_platform_layer.cpp"
+    )
+
+    set(HEADERS ${HEADERS}
+        "include/odyssey/win_entry.h"
+        "include/odyssey/platform/win_platform_layer.h"
+    )
 else()
     add_definitions(-DIS_WINDOWS_PLATFORM=0)
 endif()
 
+assign_source_group(${SOURCES})
+assign_source_group(${HEADERS})
 
 add_library (odyssey ${SOURCES} ${HEADERS})
 

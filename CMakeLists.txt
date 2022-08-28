@@ -28,18 +28,22 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${CMAKE_CURRENT_SOURCE_DIR}/${ODYSSEY_L
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELWITHDEBINFO ${CMAKE_CURRENT_SOURCE_DIR}/${ODYSSEY_LIB})
 
 include_directories(
-    "include"
+    ${ODYSSEY_PATH}/src
+    ${ODYSSEY_PATH}/include
     ${ODYSSEY_PATH}/extern/glfw/include
     ${ODYSSEY_PATH}/extern/spdlog/include
     ${ODYSSEY_PATH}/extern/glm
     ${ODYSSEY_PATH}/extern/imgui
+    $ENV{VK_SDK_PATH}/Include
 )
 
 set(SOURCES
     "src/core/engine.cpp"
     "src/core/logger.cpp"
 
-    "src/platform/platform_layer.cpp"
+    "src/renderer/renderer_frontend.cpp"
+
+    "src/renderer/vulkan/vulkan_backend.cpp"
     )
 
 set(HEADERS
@@ -53,6 +57,15 @@ set(HEADERS
     "include/odyssey/core/logger.h"
 
     "include/odyssey/platform/platform_layer.h"
+
+    "src/renderer/renderer_types.h"
+    "src/renderer/renderer_backend.h"
+    "src/renderer/renderer_frontend.h"
+
+    "src/renderer/vulkan/vulkan_backend.h"
+    "src/renderer/vulkan/vulkan_types.h"
+
+    "src/resources/resource_types.h"
     )
 
 if (IS_WINDOWS)
@@ -65,7 +78,6 @@ if (IS_WINDOWS)
 
     set(HEADERS ${HEADERS}
         "include/odyssey/win_entry.h"
-        "include/odyssey/platform/win_platform_layer.h"
     )
 else()
     add_definitions(-DIS_WINDOWS_PLATFORM=0)

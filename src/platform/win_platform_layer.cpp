@@ -1,4 +1,6 @@
-#include "odyssey/platform/win_platform_layer.h"
+#include "odyssey/platform/platform_layer.h"
+
+#include "renderer/vulkan/vulkan_backend.h"
 
 #if IS_WINDOWS_PLATFORM
 
@@ -7,19 +9,21 @@ using namespace Odyssey;
 
 #include <windows.h>
 #include <windowsx.h>
-#include <cstdlib>
 
 #include <thread>
 #include <chrono>
 
 #include <GLFW/glfw3.h>
 
-bool WindowsPlatform::Initialize(const char* title, int x, int y, int width, int height)
+static GLFWwindow* locWindow{};
+
+bool PlatformLayer::Initialize(const char* title, int x, int y, int width, int height)
 {
 	glfwInit();
 
 	if (!glfwVulkanSupported())
 	{
+		Logger::LogError("GLFW vulkan is not supported! Shutting down");
 		return false;
 	}
 	Logger::Log("GLFW vulkan is supported!");
@@ -29,41 +33,65 @@ bool WindowsPlatform::Initialize(const char* title, int x, int y, int width, int
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
 	Logger::Log("Creating Window {} at {} {} with {} {}", title, x, y, width, height);
-	myWindow = glfwCreateWindow(width, height, title, nullptr, nullptr);
+	locWindow = glfwCreateWindow(width, height, title, nullptr, nullptr);
 
-	glfwShowWindow(myWindow);
+	glfwShowWindow(locWindow);
 
 	return true;
 }
 
-void WindowsPlatform::Shutdown()
+void PlatformLayer::Shutdown()
 {
-	glfwDestroyWindow(myWindow);
+	glfwDestroyWindow(locWindow);
 	glfwTerminate();
 }
 
-bool WindowsPlatform::PumpMessages()
+bool PlatformLayer::PumpMessages()
 {
 	glfwPollEvents();
-	return !glfwWindowShouldClose(myWindow);
+	return !glfwWindowShouldClose(locWindow);
 }
 
-double WindowsPlatform::GetTimeSinceStartup()
+double PlatformLayer::GetTimeSinceStartup()
 {
-	return 0.0;
+	return glfwGetTime();
 }
 
-void WindowsPlatform::Sleep(long ms)
+void PlatformLayer::Sleep(long ms)
 {
 	std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 }
 
-int WindowsPlatform::GetCoreCount()
+int PlatformLayer::GetCoreCount()
 {
 	SYSTEM_INFO sysinfo;
 	GetSystemInfo(&sysinfo);
 	Logger::Log("{} cores detected.", sysinfo.dwNumberOfProcessors);
 	return sysinfo.dwNumberOfProcessors;
+}
+
+VkSurfaceKHR PlatformLayer::GetVulkanSurface(VkInstance instance)
+{
+	VkSurfaceKHR surface{};
+	VkResult err = glfwCreateWindowSurface(instance, locWindow, NULL, &surface);
+	if (err)
+	{
+		Logger::LogError("Vulkan surface creation failed!");
+		return {};
+	}
+	return surface;
+}
+
+bool PlatformLayer::GetVulkanExtensionNames(std::vector<const char*>& names)
+{
+	unsigned int count{};
+	const char** extensions = glfwGetRequiredInstanceExtensions(&count);
+	for (unsigned int i = 0; i < count; ++i)
+	{
+		names.push_back(extensions[i]);
+	}
+
+	return true;
 }
 
 #endif

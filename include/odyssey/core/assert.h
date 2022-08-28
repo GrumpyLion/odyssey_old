@@ -11,7 +11,7 @@
 #define debugBreak() __builtin_trap()
 #endif
 
-#if !IS_FINAL
+#if 1 // TODO should be disabled on final builds
 
 #define ASSERT(expr)                                                                                    \
     {                                                                                                   \

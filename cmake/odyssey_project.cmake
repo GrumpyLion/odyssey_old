@@ -86,18 +86,22 @@ set(ODYSSEY_PROJECT_INCLUDE_DIRS
 	${ODYSSEY_PATH}/extern/spdlog/include
 	${ODYSSEY_PATH}/extern/glm
 	${ODYSSEY_PATH}/extern/imgui
+    $ENV{VK_SDK_PATH}/Include
     )
 
 set(ODYSSEY_PROJECT_LIBS
 	optimized odyssey
 	optimized imgui
+	optimized vulkan-1
 
 	debug odyssey_d
 	debug imgui_d
+	debug vulkan-1
 	)
 
 set(ODYSSEY_PROJECT_LIB_DIRS
 	${ODYSSEY_PATH}/lib
+	$ENV{VK_SDK_PATH}/Lib
 	)
 
 
@@ -119,6 +123,7 @@ function(odysseyProject name sources headers proj_resources genDefinitions targe
 	SET(LINK_LIBRARIES "")
     SET(LINK_LIBRARIES ${LINK_LIBRARIES} odyssey)
     SET(LINK_LIBRARIES ${LINK_LIBRARIES} imgui)
+	SET(LINK_LIBRARIES ${LINK_LIBRARIES} ${ODYSSEY_PROJECT_LIBS})
 
     if (USE_GLFW)
         SET(LINK_LIBRARIES ${LINK_LIBRARIES} glfw)

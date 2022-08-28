@@ -1,7 +1,10 @@
+#pragma once
+
+#include "renderer/renderer_frontend.h"
+
 namespace Odyssey
 {
 	class Game;
-	class PlatformLayer;
 
 	class Engine
 	{
@@ -12,5 +15,6 @@ namespace Odyssey
 
 	private:
 		Game* myGame{};
+		RendererFrontend myRendererFrontend{};
 	};
 }

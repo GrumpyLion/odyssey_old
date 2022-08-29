@@ -84,9 +84,9 @@ VkSurfaceKHR PlatformLayer::GetVulkanSurface(VkInstance instance)
 
 bool PlatformLayer::GetVulkanExtensionNames(std::vector<const char*>& names)
 {
-	unsigned int count{};
+	uint32_t count{};
 	const char** extensions = glfwGetRequiredInstanceExtensions(&count);
-	for (unsigned int i = 0; i < count; ++i)
+	for (uint32_t i = 0; i < count; ++i)
 	{
 		names.push_back(extensions[i]);
 	}

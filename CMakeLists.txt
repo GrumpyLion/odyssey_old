@@ -44,6 +44,9 @@ set(SOURCES
     "src/renderer/renderer_frontend.cpp"
 
     "src/renderer/vulkan/vulkan_backend.cpp"
+    "src/renderer/vulkan/vulkan_device.cpp"
+    "src/renderer/vulkan/vulkan_swapchain.cpp"
+
     )
 
 set(HEADERS
@@ -64,6 +67,8 @@ set(HEADERS
 
     "src/renderer/vulkan/vulkan_backend.h"
     "src/renderer/vulkan/vulkan_types.h"
+    "src/renderer/vulkan/vulkan_device.h"
+    "src/renderer/vulkan/vulkan_swapchain.h"
 
     "src/resources/resource_types.h"
     )

@@ -15,6 +15,5 @@ namespace Odyssey
 
 	private:
 		Game* myGame{};
-		RendererFrontend myRendererFrontend{};
 	};
 }

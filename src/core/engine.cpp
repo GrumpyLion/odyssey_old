@@ -16,12 +16,14 @@ Engine::Engine(Game* game)
 	PlatformLayer::Initialize(myGame->GetName(), 100, 100, 1024, 600);
 	PlatformLayer::GetCoreCount();
 	
-	myRendererFrontend.Initialize();
+	RendererFrontend::Initialize();
 }
 
 Engine::~Engine()
 {
 	delete myGame;
+
+	RendererFrontend::Shutdown();
 }
 
 void Engine::Run()

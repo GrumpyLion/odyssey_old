@@ -2,18 +2,12 @@
 
 namespace Odyssey
 {
-    class RendererBackend;
-
-    class RendererFrontend
+    namespace RendererFrontend
     {
-    public:
-        ~RendererFrontend();
-
         bool Initialize();
+        void Shutdown();
+
         void OnResize(int width, int height);
         bool DrawFrame();
-
-    private:
-        RendererBackend* myBackend{};
     };    
 }

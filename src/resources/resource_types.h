@@ -63,7 +63,7 @@ namespace Odyssey
 
     struct Texture
     {
-        unsigned int myID{};
+        uint32_t myID{};
         TextureType myType{};
         int myWidth{};
         int myHeight{};

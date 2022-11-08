@@ -5,65 +5,25 @@
 
 #include "vulkan_types.h"
 #include "renderer/renderer_backend.h"
+#include "VkBootstrap.h"
 
 namespace Odyssey
 {
-    struct Device
-    {        
-        VkDevice myLogicalDevice{};
-        VkPhysicalDevice myPhysicalDevice{};
-
-        int myGraphicsQueueIndex{};
-        int myPresentQueueIndex{};
-        int myTransferQueueIndex{};
-        int myComputeQueueIndex{};
-
-        VkQueue myGraphicsQueue{};
-        VkQueue myPresentQueue{};
-        VkQueue myTransferQueue{};
-
-        bool mySupportsDeviceLocalHostVisible{};
-
-        VkPhysicalDeviceProperties myProperties{};
-        VkPhysicalDeviceFeatures myFeatures{};
-        VkPhysicalDeviceMemoryProperties myMemory{};
-    
-        VkFormat myDepthFormat{};
-        int myDepthChannelCount{};
-
-        VulkanSwapchainSupportInfo mySwapchainSupport{};
-    };
-
-    struct Swapchain
-    {
-        VkSurfaceFormatKHR myImageFormat{};
-        VkSwapchainKHR mySwapchain{};
-
-        int myMaxFramesInFlight{};
-        uint32_t myImageCount{};
-    };
-
     class VulkanBackend final : public RendererBackend
     {
     public:
-        ~VulkanBackend();
+        ~VulkanBackend() override;
 
         bool Initialize(const RendererBackendConfig& config) override;
 
-        int myFramebufferWidth{};
-        int myFramebufferHeight{};
+        bool CreateInstance();
+        bool CreateDevice();
+        bool CreateSwapchain();
 
-        VkInstance myInstance{};
-        VkSurfaceKHR mySurface{};
-
-        Device myVulkanDevice{};
-        Swapchain myVulkanSwapchain{};
-
-        VkCommandPool myGraphicsCommandPool{};
-
-#if IS_DEBUG
-        VkDebugUtilsMessengerEXT myDebugMessenger{};
-#endif
+        vkb::Instance myInstance;
+        VkSurfaceKHR mySurface;
+        vkb::Device myDevice;
+        vkb::Swapchain mySwapchain;
     };
 
     namespace PlatformLayer

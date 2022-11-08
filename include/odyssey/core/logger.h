@@ -17,9 +17,21 @@ namespace Odyssey
 		}
 
 		template<class ... Args>
+		static void Log(Args... args)
+		{
+			spdlog::info(std::forward<Args>(args)...);
+		}
+
+		template<class ... Args>
 		static void LogError(const char* format, Args... args)
 		{
 			spdlog::error(format, std::forward<Args>(args)...);
+		}
+
+		template<class ... Args>
+		static void LogError(Args... args)
+		{
+			spdlog::error(std::forward<Args>(args)...);
 		}
 
 	private:

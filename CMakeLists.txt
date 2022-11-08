@@ -32,8 +32,10 @@ include_directories(
     ${ODYSSEY_PATH}/include
     ${ODYSSEY_PATH}/extern/glfw/include
     ${ODYSSEY_PATH}/extern/spdlog/include
+    ${ODYSSEY_PATH}/extern/vma/include
     ${ODYSSEY_PATH}/extern/glm
     ${ODYSSEY_PATH}/extern/imgui
+    ${ODYSSEY_PATH}/extern/vkbootstrap
     $ENV{VK_SDK_PATH}/Include
 )
 
@@ -44,8 +46,6 @@ set(SOURCES
     "src/renderer/renderer_frontend.cpp"
 
     "src/renderer/vulkan/vulkan_backend.cpp"
-    "src/renderer/vulkan/vulkan_device.cpp"
-    "src/renderer/vulkan/vulkan_swapchain.cpp"
 
     )
 
@@ -67,8 +67,6 @@ set(HEADERS
 
     "src/renderer/vulkan/vulkan_backend.h"
     "src/renderer/vulkan/vulkan_types.h"
-    "src/renderer/vulkan/vulkan_device.h"
-    "src/renderer/vulkan/vulkan_swapchain.h"
 
     "src/resources/resource_types.h"
     )

@@ -16,7 +16,7 @@ Engine::Engine(Game* game)
 	PlatformLayer::Initialize(myGame->GetName(), 100, 100, 1024, 600);
 	PlatformLayer::GetCoreCount();
 	
-	RendererFrontend::Initialize();
+	RendererFrontend::Initialize(1024, 600);
 }
 
 Engine::~Engine()

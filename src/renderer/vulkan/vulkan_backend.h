@@ -1,9 +1,8 @@
 #pragma once
 
-#include <vector>
 #include <vulkan/vulkan.h>
 
-#include "vulkan_types.h"
+#include "odyssey/types.h"
 #include "renderer/renderer_backend.h"
 #include "VkBootstrap.h"
 
@@ -12,18 +11,45 @@ namespace Odyssey
     class VulkanBackend final : public RendererBackend
     {
     public:
+        VulkanBackend();
         ~VulkanBackend() override;
 
         bool Initialize(const RendererBackendConfig& config) override;
 
         bool CreateInstance();
         bool CreateDevice();
-        bool CreateSwapchain();
+        bool CreateSwapchain(const RendererBackendConfig& config);
 
-        vkb::Instance myInstance;
-        VkSurfaceKHR mySurface;
-        vkb::Device myDevice;
-        vkb::Swapchain mySwapchain;
+        void InitCommands();
+    	void InitDefaultRenderPass();
+        void InitFramebuffers(const RendererBackendConfig& config);
+
+        VkCommandPoolCreateInfo CommandPoolCreateInfo(u32 queueFamilyIndex, VkCommandPoolCreateFlags flags = 0) const;
+        VkCommandBufferAllocateInfo CommandBufferAllocateBuffer(VkCommandPool pool, u32 count = 1, VkCommandBufferLevel level = VK_COMMAND_BUFFER_LEVEL_PRIMARY) const;
+
+    private:
+        vkb::Instance myVKBInstance{};
+        VkInstance myInstance{};
+        VkSurfaceKHR mySurface{};
+        VkDevice myDevice{};
+        VkPhysicalDevice myPhysicalDevice{};
+        VkPhysicalDeviceProperties myPhysicalDeviceProperties{};
+        VkDebugUtilsMessengerEXT myDebugMessenger{};
+
+    	VkSwapchainKHR mySwapchain{};
+        VkFormat mySwapchainImageFormat{};
+        Vector<VkImage> mySwapchainImages{};
+        Vector<VkImageView> mySwapchainImageViews{};
+
+
+        VkQueue myGraphicsQueue{};
+        u32  myGraphicsQueueFamily{};
+
+        VkCommandPool myCommandPool{};
+        VkCommandBuffer myMainCommandBuffer{};
+
+        VkRenderPass myRenderPass{};
+        Vector<VkFramebuffer> myFramebuffers;
     };
 
     namespace PlatformLayer

@@ -13,10 +13,12 @@ void RendererFrontend::Shutdown()
     delete locBackend;
 }
 
-bool RendererFrontend::Initialize()
+bool RendererFrontend::Initialize(int width, int height)
 {
     RendererBackendConfig config{};
     config.myApplicationName = "test";
+    config.myWidth = width;
+    config.myHeight = height;
     locBackend = new VulkanBackend();
     locBackend->Initialize(config);
     return true;    

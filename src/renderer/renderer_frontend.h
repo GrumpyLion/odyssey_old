@@ -4,7 +4,7 @@ namespace Odyssey
 {
     namespace RendererFrontend
     {
-        bool Initialize();
+        bool Initialize(int width, int height);
         void Shutdown();
 
         void OnResize(int width, int height);

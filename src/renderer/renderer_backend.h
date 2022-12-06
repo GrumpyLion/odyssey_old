@@ -5,6 +5,8 @@ namespace Odyssey
     struct RendererBackendConfig
     {
         const char* myApplicationName{};
+        int myWidth = 0;
+        int myHeight = 0;
     };
 
     class RendererBackend

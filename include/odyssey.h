@@ -1,5 +1,6 @@
 #pragma once
 
+#include "odyssey/types.h"
 #include "odyssey/defines.h"
 #include "odyssey/game.h"
 #include "odyssey/core/engine.h"

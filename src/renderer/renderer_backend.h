@@ -15,5 +15,6 @@ namespace Odyssey
         virtual ~RendererBackend() = default;
 
         virtual bool Initialize(const RendererBackendConfig& config) = 0;
+        virtual void Render() = 0;
     };    
 }

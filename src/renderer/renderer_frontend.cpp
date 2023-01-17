@@ -23,3 +23,9 @@ bool RendererFrontend::Initialize(int width, int height)
     locBackend->Initialize(config);
     return true;    
 }
+
+bool RendererFrontend::Render()
+{
+    locBackend->Render();
+    return true;
+}

@@ -35,6 +35,12 @@ VulkanBackend::VulkanBackend()
 
 VulkanBackend::~VulkanBackend()
 {
+    vkDeviceWaitIdle(myDevice);
+
+    vkDestroySemaphore(myDevice, myPresentSemaphore, nullptr);
+    vkDestroySemaphore(myDevice, myRenderSemaphore, nullptr);
+    vkDestroyFence(myDevice, myRenderFence, nullptr);
+
     vkDestroyCommandPool(myDevice, myCommandPool, nullptr);
 
     vkDestroySwapchainKHR(myDevice, mySwapchain, nullptr);
@@ -68,8 +74,24 @@ bool VulkanBackend::Initialize(const RendererBackendConfig& config)
     InitCommands();
     InitDefaultRenderPass();
     InitFramebuffers(config);
+    InitStructures();
 
     return true;
+}
+
+void VulkanBackend::InitStructures()
+{
+    VkFenceCreateInfo fenceCreateInfo{};
+    fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+    VK_CHECK(vkCreateFence(myDevice, &fenceCreateInfo, nullptr, &myRenderFence));
+
+    VkSemaphoreCreateInfo semaphoreCreateInfo{};
+    semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    
+    VK_CHECK(vkCreateSemaphore(myDevice, &semaphoreCreateInfo, nullptr, &myPresentSemaphore));
+    VK_CHECK(vkCreateSemaphore(myDevice, &semaphoreCreateInfo, nullptr, &myRenderSemaphore));
 }
 
 bool VulkanBackend::CreateInstance()
@@ -157,6 +179,8 @@ bool VulkanBackend::CreateSwapchain(const RendererBackendConfig& config)
     mySwapchainImageFormat = swapchainReturn->image_format;
     mySwapchainImages = vkbSwapchain.get_images().value();
     mySwapchainImageViews = vkbSwapchain.get_image_views().value();
+    myWindowExtent.width = config.myWidth;
+    myWindowExtent.height = config.myHeight;
 
     return true;
 }
@@ -221,6 +245,71 @@ void VulkanBackend::InitFramebuffers(const RendererBackendConfig& config)
         fbInfo.pAttachments = &mySwapchainImageViews[i];
         VK_CHECK(vkCreateFramebuffer(myDevice, &fbInfo, nullptr, &myFramebuffers[i]));
     }
+}
+
+void VulkanBackend::Render()
+{
+    VK_CHECK(vkWaitForFences(myDevice, 1, &myRenderFence, true, 1000000000));
+    VK_CHECK(vkResetFences(myDevice, 1, &myRenderFence));
+
+    uint32_t swapchainImageIndex = 0;
+    VK_CHECK(vkAcquireNextImageKHR(myDevice, mySwapchain, 1000000000, myPresentSemaphore, nullptr, &swapchainImageIndex));
+
+    VK_CHECK(vkResetCommandBuffer(myMainCommandBuffer, 0));
+
+    VkCommandBuffer cmd = myMainCommandBuffer;
+
+    VkCommandBufferBeginInfo cmdBeginInfo{};
+    cmdBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    cmdBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+    VK_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo));
+
+    VkClearValue clearValue{};
+    float flash = abs(sin(myFrameNumber / 120.0f));
+    clearValue.color = { { 0.0f, 0.0f, flash, 1.0f} };
+    VkRenderPassBeginInfo beginInfo{};
+    beginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    beginInfo.renderPass = myRenderPass;
+    beginInfo.renderArea.offset.x = 0;
+    beginInfo.renderArea.offset.y = 0;
+    beginInfo.renderArea.extent = myWindowExtent;
+    beginInfo.framebuffer = myFramebuffers[swapchainImageIndex];
+
+    beginInfo.clearValueCount = 1;
+    beginInfo.pClearValues = &clearValue;
+
+    vkCmdBeginRenderPass(cmd, &beginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+    vkCmdEndRenderPass(cmd);
+
+    VK_CHECK(vkEndCommandBuffer(cmd));
+
+    VkSubmitInfo submit{};
+    submit.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+    VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    submit.pWaitDstStageMask = &waitStage;
+    submit.waitSemaphoreCount = 1;
+    submit.pWaitSemaphores = &myPresentSemaphore;
+    submit.signalSemaphoreCount = 1;
+    submit.pSignalSemaphores = &myRenderSemaphore;
+    submit.commandBufferCount = 1;
+    submit.pCommandBuffers = &cmd;
+
+    VK_CHECK(vkQueueSubmit(myGraphicsQueue, 1, &submit, myRenderFence));
+
+    VkPresentInfoKHR presentInfo{};
+    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    presentInfo.pSwapchains = &mySwapchain;
+    presentInfo.swapchainCount = 1;
+    presentInfo.pWaitSemaphores = &myRenderSemaphore;
+    presentInfo.waitSemaphoreCount = 1;
+    presentInfo.pImageIndices = &swapchainImageIndex;
+
+    VK_CHECK(vkQueuePresentKHR(myGraphicsQueue, &presentInfo));
+
+    myFrameNumber++;
 }
 
 VkCommandPoolCreateInfo VulkanBackend::CommandPoolCreateInfo(u32 queueFamilyIndex, VkCommandPoolCreateFlags flags) const

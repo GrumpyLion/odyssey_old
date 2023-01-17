@@ -15,6 +15,7 @@ namespace Odyssey
         ~VulkanBackend() override;
 
         bool Initialize(const RendererBackendConfig& config) override;
+        void InitStructures();
 
         bool CreateInstance();
         bool CreateDevice();
@@ -23,6 +24,8 @@ namespace Odyssey
         void InitCommands();
     	void InitDefaultRenderPass();
         void InitFramebuffers(const RendererBackendConfig& config);
+
+        void Render() override;
 
         VkCommandPoolCreateInfo CommandPoolCreateInfo(u32 queueFamilyIndex, VkCommandPoolCreateFlags flags = 0) const;
         VkCommandBufferAllocateInfo CommandBufferAllocateBuffer(VkCommandPool pool, u32 count = 1, VkCommandBufferLevel level = VK_COMMAND_BUFFER_LEVEL_PRIMARY) const;
@@ -41,7 +44,6 @@ namespace Odyssey
         Vector<VkImage> mySwapchainImages{};
         Vector<VkImageView> mySwapchainImageViews{};
 
-
         VkQueue myGraphicsQueue{};
         u32  myGraphicsQueueFamily{};
 
@@ -50,6 +52,15 @@ namespace Odyssey
 
         VkRenderPass myRenderPass{};
         Vector<VkFramebuffer> myFramebuffers;
+
+        VkSemaphore myPresentSemaphore;
+        VkSemaphore myRenderSemaphore;
+        VkFence myRenderFence;
+
+        VkExtent2D myWindowExtent;
+
+        // TEMP
+        int myFrameNumber = 0;
     };
 
     namespace PlatformLayer

@@ -8,6 +8,6 @@ namespace Odyssey
         void Shutdown();
 
         void OnResize(int width, int height);
-        bool DrawFrame();
+        bool Render();
     };    
 }

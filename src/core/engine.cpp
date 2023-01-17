@@ -32,6 +32,8 @@ void Engine::Run()
 	{
 		myGame->Update(0.0f);
 
+		RendererFrontend::Render();
+
 		PlatformLayer::Sleep(5);
 	}
 }

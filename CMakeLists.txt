@@ -9,6 +9,8 @@ project(odyssey)
 #    add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../odyssey_extras" "${EXTERNAL_BIN_DIR}_extras")
 #endif()
 
+find_program(GLSL_VALIDATOR glslangValidator HINTS /usr/bin /usr/local/bin $ENV{VULKAN_SDK}/Bin/ $ENV{VULKAN_SDK}/Bin32/)
+
 set(ODYSSEY_BIN "bin")
 set(ODYSSEY_LIB "lib")
 
@@ -38,6 +40,30 @@ include_directories(
     ${ODYSSEY_PATH}/extern/vkbootstrap
     $ENV{VK_SDK_PATH}/Include
 )
+
+file(GLOB_RECURSE GLSL_SOURCE_FILES
+    "${ODYSSEY_PATH}/assets_src/shaders/*.frag"
+    "${ODYSSEY_PATH}/assets_src/shaders/*.vert"
+    "${ODYSSEY_PATH}/assets_src/shaders/*.comp"
+    )
+
+foreach(GLSL ${GLSL_SOURCE_FILES})
+  message(STATUS "BUILDING SHADER")
+  get_filename_component(FILE_NAME ${GLSL} NAME)
+  set(SPIRV "${ODYSSEY_PATH}/assets/shaders/${FILE_NAME}.spv")
+  message(STATUS ${GLSL})
+  ##execute glslang command to compile that specific shader
+  add_custom_command(
+    OUTPUT ${SPIRV}
+    COMMAND ${GLSL_VALIDATOR} -V ${GLSL} -o ${SPIRV}
+    DEPENDS ${GLSL})
+  list(APPEND SPIRV_BINARY_FILES ${SPIRV})
+endforeach(GLSL)
+
+add_custom_target(
+    shaders 
+    DEPENDS ${SPIRV_BINARY_FILES}
+    )
 
 set(SOURCES
     "src/core/engine.cpp"

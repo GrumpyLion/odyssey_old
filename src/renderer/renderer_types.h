@@ -2,17 +2,12 @@
 
 #include "glm/glm.hpp"
 
-#include "resources/resource_types.h"
-
-namespace Odyssey
+enum class RendererBackend
 {
-    enum class RendererBackend
-    {
-        RENDERER_VULKAN
-    };
+    RENDERER_VULKAN
+};
 
-    struct GeometryData
-    {
-        glm::mat4 model;
-    };
-}
+struct GeometryData
+{
+    glm::mat4 model;
+};

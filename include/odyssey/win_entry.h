@@ -1,7 +1,6 @@
 #pragma once
 
 #include "game.h"
-using namespace Odyssey;
 
 extern Game* CreateGame();
 

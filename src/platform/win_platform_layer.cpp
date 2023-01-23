@@ -5,7 +5,6 @@
 #if IS_WINDOWS_PLATFORM
 
 #include "odyssey/core/logger.h"
-using namespace Odyssey;
 
 #include <windows.h>
 #include <windowsx.h>

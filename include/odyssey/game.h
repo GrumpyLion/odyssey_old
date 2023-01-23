@@ -2,26 +2,23 @@
 
 #include "glm/glm.hpp"
 
-namespace Odyssey
+class Engine;
+
+class Game
 {
-	class Engine;
+public:
+	virtual ~Game() = default;
 
-	class Game
+	void SetEngine(Engine* engine)
 	{
-	public:
-		virtual ~Game() = default;
+		myEngine = engine;
+	}
 
-		void SetEngine(Engine* engine)
-		{
-			myEngine = engine;
-		}
+	virtual void Update(float delta) = 0;
+	virtual void Render(float delta) = 0;
+	virtual const char* GetName() = 0;
 
-		virtual void Update(float delta) = 0;
-		virtual void Render(float delta) = 0;
-		virtual const char* GetName() = 0;
-
-	protected:
-		Engine* myEngine{};
-		glm::ivec2 myWindowPosition{};
-	};
-}
+protected:
+	Engine* myEngine{};
+	glm::ivec2 myWindowPosition{};
+};

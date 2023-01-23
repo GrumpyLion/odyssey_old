@@ -1,7 +1,5 @@
 #include "odyssey.h"
 
-using namespace Odyssey;
-
 #include "renderer_frontend.h"
 #include "renderer_backend.h"
 #include "vulkan/vulkan_backend.h"

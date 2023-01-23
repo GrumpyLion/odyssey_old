@@ -1,5 +1,4 @@
 #include "odyssey.h"
-using namespace Odyssey;
 
 #include "odyssey/platform/platform_layer.h"
 #include "odyssey/core/logger.h"

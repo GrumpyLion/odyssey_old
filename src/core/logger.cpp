@@ -1,12 +1,8 @@
 #include "odyssey/core/logger.h"
 
-#include <iomanip>
-#include <sstream>
 #include <spdlog/async.h>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/msvc_sink.h>
-
-using namespace Odyssey;
 
 std::shared_ptr<spdlog::logger> Logger::myLogger = nullptr;
 

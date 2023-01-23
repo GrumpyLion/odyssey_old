@@ -1,19 +1,14 @@
 #pragma once
 
-#include "renderer/renderer_frontend.h"
+class Game;
 
-namespace Odyssey
+class Engine
 {
-	class Game;
+public:
+	Engine(Game* game);
+	~Engine();
+	void Run();
 
-	class Engine
-	{
-	public:
-		Engine(Game* game);
-		~Engine();
-		void Run();
-
-	private:
-		Game* myGame{};
-	};
-}
+private:
+	Game* myGame{};
+};

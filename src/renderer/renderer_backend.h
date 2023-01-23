@@ -1,20 +1,17 @@
 #pragma once
 
-namespace Odyssey
+struct RendererBackendConfig
 {
-    struct RendererBackendConfig
-    {
-        const char* myApplicationName{};
-        int myWidth = 0;
-        int myHeight = 0;
-    };
+    const char* myApplicationName{};
+    int myWidth = 0;
+    int myHeight = 0;
+};
 
-    class RendererBackend
-    {
-    public:
-        virtual ~RendererBackend() = default;
+class RendererBackend
+{
+public:
+    virtual ~RendererBackend() = default;
 
-        virtual bool Initialize(const RendererBackendConfig& config) = 0;
-        virtual void Render() = 0;
-    };    
-}
+    virtual bool Initialize(const RendererBackendConfig& config) = 0;
+    virtual void Render() = 0;
+};    

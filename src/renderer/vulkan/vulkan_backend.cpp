@@ -42,6 +42,9 @@ VulkanBackend::~VulkanBackend()
 {
     vkDeviceWaitIdle(myDevice);
 
+    vkDestroyPipeline(myDevice, myTrianglePipeline, nullptr);
+    vkDestroyPipelineLayout(myDevice, myTrianglePipelineLayout, nullptr);
+
     vkDestroySemaphore(myDevice, myPresentSemaphore, nullptr);
     vkDestroySemaphore(myDevice, myRenderSemaphore, nullptr);
     vkDestroyFence(myDevice, myRenderFence, nullptr);
@@ -302,6 +305,9 @@ void VulkanBackend::InitPipelines()
     pipelineBuilder.myPipelineLayout = myTrianglePipelineLayout;
 
     myTrianglePipeline = pipelineBuilder.BuildPipeline(myDevice, myRenderPass);
+
+    vkDestroyShaderModule(myDevice, triangleVertexShader, nullptr);
+    vkDestroyShaderModule(myDevice, triangleFragShader, nullptr);
 }
 
 bool VulkanBackend::LoadShaderModule(const std::string& filePath, VkShaderModule* outShaderModule) const

@@ -6,7 +6,7 @@ extern Game* CreateGame();
 
 #if IS_WINDOWS_PLATFORM
 
-int main()
+int main(int argc, char* argv[])
 {
 	Game* game = CreateGame();
 	Engine engine = Engine(game);

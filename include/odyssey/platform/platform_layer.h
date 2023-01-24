@@ -1,5 +1,7 @@
 #pragma once
 
+#include "odyssey/types.h"
+
 namespace PlatformLayer
 {
 	bool Initialize(const char* title, int x, int y, int width, int height);
@@ -8,4 +10,7 @@ namespace PlatformLayer
 	double GetTimeSinceStartup();
 	void Sleep(long ms);
 	int GetCoreCount();
+	void SetArgs(int argc, char* argv[]);
+	Vector<std::string> GetArgs();
+	std::string GetBinPath();
 }

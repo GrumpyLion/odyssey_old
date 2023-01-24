@@ -6,8 +6,11 @@
 
 #include "odyssey/core/logger.h"
 
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <windowsx.h>
+#include <shellapi.h>
+#include <atlstr.h>
 
 #include <thread>
 #include <chrono>
@@ -67,6 +70,27 @@ int PlatformLayer::GetCoreCount()
 	GetSystemInfo(&sysinfo);
 	Logger::Log("{} cores detected.", sysinfo.dwNumberOfProcessors);
 	return sysinfo.dwNumberOfProcessors;
+}
+
+Vector<std::string> PlatformLayer::GetArgs()
+{
+	Vector<std::string> args;
+	const LPWSTR cmd = GetCommandLineW();
+	int argc = 0;
+	LPWSTR* argv = CommandLineToArgvW(cmd, &argc);
+	for (int i = 0; i < argc; i++) {
+		args.push_back(std::string(CW2A(reinterpret_cast<wchar_t**>(argv)[i])));
+	}
+	LocalFree(argv);
+	return args;
+}
+
+std::string PlatformLayer::GetBinPath()
+{
+	const auto args = GetArgs();
+	auto arg0 = args[0];
+	std::replace(arg0.begin(), arg0.end(), '\\', '/');
+	return arg0.substr(0, arg0.find_last_of('/'));
 }
 
 VkSurfaceKHR PlatformLayer::GetVulkanSurface(VkInstance instance)

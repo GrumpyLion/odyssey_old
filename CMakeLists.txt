@@ -72,6 +72,7 @@ set(SOURCES
     "src/renderer/renderer_frontend.cpp"
 
     "src/renderer/vulkan/vulkan_backend.cpp"
+    "src/renderer/vulkan/vulkan_initializers.cpp"
 
     )
 
@@ -93,6 +94,7 @@ set(HEADERS
 
     "src/renderer/vulkan/vulkan_backend.h"
     "src/renderer/vulkan/vulkan_types.h"
+    "src/renderer/vulkan/vulkan_initializers.h"
 
     "src/resources/resource_types.h"
     )

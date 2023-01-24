@@ -1,7 +1,14 @@
 #include "odyssey.h"
 
+#include "odyssey/platform/platform_layer.h"
+
 #include "vulkan_types.h"
 #include "vulkan_backend.h"
+#include "vulkan_initializers.h"
+
+#include <fstream>
+
+// TODO move some of this stuff here to other files.. will be using this for the beginning
 
 VKAPI_ATTR VkBool32 VKAPI_CALL VulkanDebugCallback(
     VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
@@ -73,6 +80,9 @@ bool VulkanBackend::Initialize(const RendererBackendConfig& config)
     InitDefaultRenderPass();
     InitFramebuffers(config);
     InitStructures();
+    InitPipelines();
+
+    myIsInitialized = true;
 
     return true;
 }
@@ -185,10 +195,10 @@ bool VulkanBackend::CreateSwapchain(const RendererBackendConfig& config)
 
 void VulkanBackend::InitCommands()
 {
-    const VkCommandPoolCreateInfo createInfo = CommandPoolCreateInfo(myGraphicsQueueFamily, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+    const VkCommandPoolCreateInfo createInfo = VulkanInit::CommandPoolCreateInfo(myGraphicsQueueFamily, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
     VK_CHECK(vkCreateCommandPool(myDevice, &createInfo, nullptr, &myCommandPool));
 
-    VkCommandBufferAllocateInfo allocInfo = CommandBufferAllocateBuffer(myCommandPool);
+    VkCommandBufferAllocateInfo allocInfo = VulkanInit::CommandBufferAllocateBuffer(myCommandPool);
     VK_CHECK(vkAllocateCommandBuffers(myDevice, &allocInfo, &myMainCommandBuffer));
 }
 
@@ -245,6 +255,83 @@ void VulkanBackend::InitFramebuffers(const RendererBackendConfig& config)
     }
 }
 
+void VulkanBackend::InitPipelines()
+{
+    const std::string binPath = PlatformLayer::GetBinPath();
+
+    VkShaderModule triangleVertexShader{};
+    if (!LoadShaderModule(binPath + "/../odyssey/assets/shaders/triangle.vert.spv", &triangleVertexShader))
+    {
+        return;
+    }
+
+    VkShaderModule triangleFragShader{};
+    if (!LoadShaderModule(binPath + "/../odyssey/assets/shaders/triangle.frag.spv", &triangleFragShader))
+    {
+        return;
+    }
+
+    VkPipelineLayoutCreateInfo pipelineInfo = VulkanInit::PipelineLayoutCreateInfo();
+    VK_CHECK(vkCreatePipelineLayout(myDevice, &pipelineInfo, nullptr, &myTrianglePipelineLayout));
+
+    PipelineBuilder pipelineBuilder{};
+
+    pipelineBuilder.myShaderStages.push_back(
+        VulkanInit::PipelineShaderStageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT, triangleVertexShader));
+
+    pipelineBuilder.myShaderStages.push_back(
+        VulkanInit::PipelineShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT, triangleFragShader));
+
+    pipelineBuilder.myVertexInputInfo = VulkanInit::VertexInputStateCreateInfo();
+
+    pipelineBuilder.myInputAssembly = VulkanInit::InputAssemblyCreateInfo(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+
+    pipelineBuilder.myViewport.x = 0.0f;
+    pipelineBuilder.myViewport.y = 0.0f;
+    pipelineBuilder.myViewport.width = (float)myWindowExtent.width;
+    pipelineBuilder.myViewport.height = (float)myWindowExtent.height;
+    pipelineBuilder.myViewport.minDepth = 0.0f;
+    pipelineBuilder.myViewport.maxDepth = 1.0f;
+
+    pipelineBuilder.myScissor.offset = { 0, 0 };
+    pipelineBuilder.myScissor.extent = myWindowExtent;
+
+    pipelineBuilder.myRasterizer = VulkanInit::RasterizationStateCreateInfo(VK_POLYGON_MODE_FILL);
+    pipelineBuilder.myMultisampling = VulkanInit::MultisamplingStateCreateInfo();
+    pipelineBuilder.myColorBlendAttachment = VulkanInit::ColorBlendAttachmentState();
+    pipelineBuilder.myPipelineLayout = myTrianglePipelineLayout;
+
+    myTrianglePipeline = pipelineBuilder.BuildPipeline(myDevice, myRenderPass);
+}
+
+bool VulkanBackend::LoadShaderModule(const std::string& filePath, VkShaderModule* outShaderModule) const
+{
+    std::ifstream file(filePath, std::ios::ate | std::ios::binary);
+
+    if (!file.is_open())
+        return false;
+
+    const size_t fileSize = (size_t)file.tellg();
+    Vector<uint32_t> buffer(fileSize / sizeof(uint32_t));
+    file.seekg(0);
+
+    file.read((char*)buffer.data(), fileSize);
+    file.close();
+
+    VkShaderModuleCreateInfo createInfo{};
+    createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+
+    createInfo.codeSize = buffer.size() * sizeof(uint32_t);
+    createInfo.pCode = buffer.data();
+
+    VkShaderModule shaderModule{};
+    if (vkCreateShaderModule(myDevice, &createInfo, nullptr, &shaderModule) != VK_SUCCESS)
+        return false;
+
+    *outShaderModule = shaderModule;
+    return true;
+}
+
 void VulkanBackend::Render()
 {
     VK_CHECK(vkWaitForFences(myDevice, 1, &myRenderFence, true, 1000000000));
@@ -279,6 +366,9 @@ void VulkanBackend::Render()
 
     vkCmdBeginRenderPass(cmd, &beginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
+    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, myTrianglePipeline);
+    vkCmdDraw(cmd, 3, 1, 0, 0);
+
     vkCmdEndRenderPass(cmd);
 
     VK_CHECK(vkEndCommandBuffer(cmd));
@@ -310,24 +400,48 @@ void VulkanBackend::Render()
     myFrameNumber++;
 }
 
-VkCommandPoolCreateInfo VulkanBackend::CommandPoolCreateInfo(u32 queueFamilyIndex, VkCommandPoolCreateFlags flags) const
+VkPipeline PipelineBuilder::BuildPipeline(VkDevice device, VkRenderPass pass) const
 {
-    VkCommandPoolCreateInfo createInfo{};
-    createInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    createInfo.pNext = nullptr;
-	createInfo.queueFamilyIndex = queueFamilyIndex;
-    createInfo.flags = flags;
+    VkPipelineViewportStateCreateInfo viewportState{};
+    viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
 
-    return createInfo;
-}
+    viewportState.viewportCount = 1;
+    viewportState.pViewports = &myViewport;
+    viewportState.scissorCount = 1;
+    viewportState.pScissors = &myScissor;
 
-VkCommandBufferAllocateInfo VulkanBackend::CommandBufferAllocateBuffer(VkCommandPool pool, u32 count, VkCommandBufferLevel level) const
-{
-    VkCommandBufferAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.pNext = nullptr;
-	allocInfo.commandPool = pool;
-    allocInfo.commandBufferCount = count;
-    allocInfo.level = level;
-    return allocInfo;
+    VkPipelineColorBlendStateCreateInfo colorBlending = {};
+    colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+
+    colorBlending.logicOpEnable = VK_FALSE;
+    colorBlending.logicOp = VK_LOGIC_OP_COPY;
+    colorBlending.attachmentCount = 1;
+    colorBlending.pAttachments = &myColorBlendAttachment;
+
+    VkGraphicsPipelineCreateInfo pipelineInfo = {};
+    pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    pipelineInfo.pNext = nullptr;
+
+    pipelineInfo.stageCount = static_cast<uint32_t>(myShaderStages.size());
+    pipelineInfo.pStages = myShaderStages.data();
+    pipelineInfo.pVertexInputState = &myVertexInputInfo;
+    pipelineInfo.pInputAssemblyState = &myInputAssembly;
+    pipelineInfo.pViewportState = &viewportState;
+    pipelineInfo.pRasterizationState = &myRasterizer;
+    pipelineInfo.pMultisampleState = &myMultisampling;
+    pipelineInfo.pColorBlendState = &colorBlending;
+    pipelineInfo.layout = myPipelineLayout;
+    pipelineInfo.renderPass = pass;
+    pipelineInfo.subpass = 0;
+    pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+
+    VkPipeline newPipeline{};
+    if (vkCreateGraphicsPipelines(
+        device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &newPipeline) != VK_SUCCESS)
+    {
+        Logger::LogError("Failed to create pipeline");
+        return VK_NULL_HANDLE;
+    }
+
+    return newPipeline;
 }

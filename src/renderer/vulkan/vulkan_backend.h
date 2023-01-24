@@ -6,6 +6,8 @@
 #include "renderer/renderer_backend.h"
 #include "VkBootstrap.h"
 
+// TODO some of this stuff needs to be moved out
+
 class VulkanBackend final : public RendererBackend
 {
 public:
@@ -22,11 +24,11 @@ public:
     void InitCommands();
     void InitDefaultRenderPass();
     void InitFramebuffers(const RendererBackendConfig& config);
+    void InitPipelines();
+
+    bool LoadShaderModule(const std::string& filePath, VkShaderModule* outShaderModule) const;
 
     void Render() override;
-
-    VkCommandPoolCreateInfo CommandPoolCreateInfo(u32 queueFamilyIndex, VkCommandPoolCreateFlags flags = 0) const;
-    VkCommandBufferAllocateInfo CommandBufferAllocateBuffer(VkCommandPool pool, u32 count = 1, VkCommandBufferLevel level = VK_COMMAND_BUFFER_LEVEL_PRIMARY) const;
 
 private:
     vkb::Instance myVKBInstance{};
@@ -43,7 +45,7 @@ private:
     Vector<VkImageView> mySwapchainImageViews{};
 
     VkQueue myGraphicsQueue{};
-    u32  myGraphicsQueueFamily{};
+    uint32_t  myGraphicsQueueFamily{};
 
     VkCommandPool myCommandPool{};
     VkCommandBuffer myMainCommandBuffer{};
@@ -57,8 +59,30 @@ private:
 
     VkExtent2D myWindowExtent;
 
+    VkPipelineLayout myTrianglePipelineLayout;
+
+    VkPipeline myTrianglePipeline;
+
+    bool myIsInitialized = false;
+
     // TEMP
     int myFrameNumber = 0;
+};
+
+class PipelineBuilder
+{
+public:
+    std::vector<VkPipelineShaderStageCreateInfo> myShaderStages;
+    VkPipelineVertexInputStateCreateInfo myVertexInputInfo;
+    VkPipelineInputAssemblyStateCreateInfo myInputAssembly;
+    VkViewport myViewport;
+    VkRect2D myScissor;
+    VkPipelineRasterizationStateCreateInfo myRasterizer;
+    VkPipelineColorBlendAttachmentState myColorBlendAttachment;
+    VkPipelineMultisampleStateCreateInfo myMultisampling;
+    VkPipelineLayout myPipelineLayout;
+
+    VkPipeline BuildPipeline(VkDevice device, VkRenderPass pass) const;
 };
 
 namespace PlatformLayer

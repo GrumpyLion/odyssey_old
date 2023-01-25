@@ -1,8 +1,10 @@
 #pragma once
 
-#include "vector"
-#include "string"
-#include "glm/glm.hpp"
+#include <vector>
+#include <string>
+
+#include <glm/glm.hpp>
+#include <glm/gtx/transform.hpp>
 
 template <typename T>
 using Vector = std::vector<T>;
@@ -18,3 +20,7 @@ using i8 = int8_t;
 using Vec4 = glm::vec4;
 using Vec3 = glm::vec3;
 using Vec2 = glm::vec2;
+
+using Mat4 = glm::mat4;
+using Mat3 = glm::mat3;
+using Mat2 = glm::mat2;

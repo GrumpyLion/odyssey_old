@@ -10,6 +10,12 @@
 
 // TODO some of this stuff needs to be moved out
 
+struct MeshPushConstants
+{
+	Vec4 myData;
+	Mat4 myRenderMatrix;
+};
+
 class VulkanBackend final : public RendererBackend
 {
 public:
@@ -71,6 +77,8 @@ private:
     VkPipeline myTrianglePipeline;
 
     Mesh myMesh{};
+
+    VkPipelineLayout myMeshPipelineLayout;
 
     bool myIsInitialized = false;
 

@@ -127,9 +127,9 @@ bool VulkanBackend::CreateInstance()
 	constexpr uint32_t logSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT  |
 #if VERY_VERBOSE
 								 VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT    |
+						         VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT       |
 #endif
-						         VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT    |
-						         VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT;
+						         VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT;
 
 	auto instanceReturn = instanceBuilder
 										.require_api_version(1,1,0)
@@ -303,6 +303,15 @@ void VulkanBackend::InitPipelines()
     }
 
     VkPipelineLayoutCreateInfo pipelineInfo = VulkanInit::PipelineLayoutCreateInfo();
+
+	VkPushConstantRange pushConstant;
+	pushConstant.offset = 0;
+	pushConstant.size = sizeof(MeshPushConstants);
+	pushConstant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+	pipelineInfo.pPushConstantRanges = &pushConstant;
+	pipelineInfo.pushConstantRangeCount = 1;
+
     VK_CHECK(vkCreatePipelineLayout(myDevice, &pipelineInfo, nullptr, &myTrianglePipelineLayout));
 
 
@@ -438,10 +447,20 @@ void VulkanBackend::Render()
 
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, myTrianglePipeline);
 
-    //bind the mesh vertex buffer with offset 0
     VkDeviceSize offset = 0;
     vkCmdBindVertexBuffers(cmd, 0, 1, &myMesh.myVertexBuffer.myBuffer, &offset);
 
+    Vec3 camPos = { 0.f,0.f,-2.f };
+    Mat4 view = glm::translate(Mat4(1.f), camPos);
+    Mat4 projection = glm::perspective(glm::radians(70.f), 1700.f / 900.f, 0.1f, 200.0f);
+    projection[1][1] *= -1;
+    Mat4 model = glm::rotate(Mat4{ 1.0f }, glm::radians(myFrameNumber * 0.4f), Vec3(0, 1, 0));
+
+    Mat4 mesh_matrix = projection * view * model;
+
+    MeshPushConstants constants{};
+    constants.myRenderMatrix = mesh_matrix;
+    vkCmdPushConstants(cmd, myTrianglePipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPushConstants), &constants);
     vkCmdDraw(cmd, 3, 1, 0, 0);
 
     vkCmdEndRenderPass(cmd);

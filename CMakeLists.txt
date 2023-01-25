@@ -82,6 +82,7 @@ set(HEADERS
 
     "include/odyssey/defines.h"
     "include/odyssey/game.h"
+    "include/odyssey/types.h"
     
     "include/odyssey/core/assert.h"
     "include/odyssey/core/engine.h"

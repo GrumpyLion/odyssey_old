@@ -2,6 +2,7 @@
 
 #include "vector"
 #include "string"
+#include "glm/glm.hpp"
 
 template <typename T>
 using Vector = std::vector<T>;
@@ -13,3 +14,7 @@ using u8 = uint8_t;
 using i32 = int32_t;
 using i16 = int16_t;
 using i8 = int8_t;
+
+using Vec4 = glm::vec4;
+using Vec3 = glm::vec3;
+using Vec2 = glm::vec2;

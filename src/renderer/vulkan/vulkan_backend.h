@@ -2,9 +2,11 @@
 
 #include <odyssey/types.h>
 #include <vulkan/vulkan.h>
+#include <vk_mem_alloc.h>
 
 #include "renderer/renderer_backend.h"
 #include "VkBootstrap.h"
+#include "vulkan_mesh.h"
 
 // TODO some of this stuff needs to be moved out
 
@@ -28,6 +30,9 @@ public:
 
     bool LoadShaderModule(const std::string& filePath, VkShaderModule* outShaderModule) const;
 
+    void LoadMeshes();
+    void UploadMesh(Mesh& mesh);
+
     void Render() override;
 
 private:
@@ -43,6 +48,8 @@ private:
     VkFormat mySwapchainImageFormat{};
     Vector<VkImage> mySwapchainImages{};
     Vector<VkImageView> mySwapchainImageViews{};
+
+    VmaAllocator myAllocator{};
 
     VkQueue myGraphicsQueue{};
     uint32_t  myGraphicsQueueFamily{};
@@ -62,6 +69,8 @@ private:
     VkPipelineLayout myTrianglePipelineLayout;
 
     VkPipeline myTrianglePipeline;
+
+    Mesh myMesh{};
 
     bool myIsInitialized = false;
 

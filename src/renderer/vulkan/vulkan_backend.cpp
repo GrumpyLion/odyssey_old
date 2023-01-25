@@ -6,6 +6,9 @@
 #include "vulkan_backend.h"
 #include "vulkan_initializers.h"
 
+#define VMA_IMPLEMENTATION
+#include <vk_mem_alloc.h>
+
 #include <fstream>
 
 // TODO move some of this stuff here to other files.. will be using this for the beginning
@@ -41,6 +44,10 @@ VulkanBackend::VulkanBackend()
 VulkanBackend::~VulkanBackend()
 {
     vkDeviceWaitIdle(myDevice);
+
+    vmaDestroyBuffer(myAllocator, myMesh.myVertexBuffer.myBuffer, myMesh.myVertexBuffer.myAllocation);
+
+    vmaDestroyAllocator(myAllocator);
 
     vkDestroyPipeline(myDevice, myTrianglePipeline, nullptr);
     vkDestroyPipelineLayout(myDevice, myTrianglePipelineLayout, nullptr);
@@ -79,11 +86,19 @@ bool VulkanBackend::Initialize(const RendererBackendConfig& config)
     if (!CreateSwapchain(config))
         return false;
 
+    VmaAllocatorCreateInfo allocatorInfo{};
+    allocatorInfo.device = myDevice;
+    allocatorInfo.physicalDevice = myPhysicalDevice;
+    allocatorInfo.instance = myInstance;
+    vmaCreateAllocator(&allocatorInfo, &myAllocator);
+
     InitCommands();
     InitDefaultRenderPass();
     InitFramebuffers(config);
     InitStructures();
     InitPipelines();
+
+    LoadMeshes();
 
     myIsInitialized = true;
 
@@ -156,7 +171,7 @@ bool VulkanBackend::CreateDevice()
 		return false;
 	}
 
-    vkb::Device vkbDevice = deviceReturn.value();
+    const vkb::Device vkbDevice = deviceReturn.value();
 
 	myDevice = vkbDevice;
     myPhysicalDevice = physicalDevice.physical_device;
@@ -260,6 +275,19 @@ void VulkanBackend::InitFramebuffers(const RendererBackendConfig& config)
 
 void VulkanBackend::InitPipelines()
 {
+    PipelineBuilder pipelineBuilder{};
+
+    VertexInputDescription vertexDescription = Vertex::GetVertexInputDescription();
+    pipelineBuilder.myVertexInputInfo = VulkanInit::VertexInputStateCreateInfo();
+
+    pipelineBuilder.myVertexInputInfo.pVertexAttributeDescriptions = vertexDescription.myAttributes.data();
+    pipelineBuilder.myVertexInputInfo.vertexAttributeDescriptionCount = static_cast<int>(vertexDescription.myAttributes.size());
+
+    pipelineBuilder.myVertexInputInfo.pVertexBindingDescriptions = vertexDescription.myBindings.data();
+    pipelineBuilder.myVertexInputInfo.vertexBindingDescriptionCount = static_cast<int>(vertexDescription.myBindings.size());
+
+    pipelineBuilder.myShaderStages.clear();
+
     const std::string binPath = PlatformLayer::GetBinPath();
 
     VkShaderModule triangleVertexShader{};
@@ -277,7 +305,6 @@ void VulkanBackend::InitPipelines()
     VkPipelineLayoutCreateInfo pipelineInfo = VulkanInit::PipelineLayoutCreateInfo();
     VK_CHECK(vkCreatePipelineLayout(myDevice, &pipelineInfo, nullptr, &myTrianglePipelineLayout));
 
-    PipelineBuilder pipelineBuilder{};
 
     pipelineBuilder.myShaderStages.push_back(
         VulkanInit::PipelineShaderStageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT, triangleVertexShader));
@@ -285,7 +312,6 @@ void VulkanBackend::InitPipelines()
     pipelineBuilder.myShaderStages.push_back(
         VulkanInit::PipelineShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT, triangleFragShader));
 
-    pipelineBuilder.myVertexInputInfo = VulkanInit::VertexInputStateCreateInfo();
 
     pipelineBuilder.myInputAssembly = VulkanInit::InputAssemblyCreateInfo(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
 
@@ -338,6 +364,44 @@ bool VulkanBackend::LoadShaderModule(const std::string& filePath, VkShaderModule
     return true;
 }
 
+void VulkanBackend::LoadMeshes()
+{
+    myMesh.myVertices.resize(3);
+
+    myMesh.myVertices[0].myPosition = { 1.f, 1.f, 0.0f };
+    myMesh.myVertices[1].myPosition = { -1.f, 1.f, 0.0f };
+    myMesh.myVertices[2].myPosition = { 0.f,-1.f, 0.0f };
+
+    myMesh.myVertices[0].myColor = { 0.f, 1.f, 0.0f };
+    myMesh.myVertices[1].myColor = { 0.f, 1.f, 0.0f };
+    myMesh.myVertices[2].myColor = { 0.f, 1.f, 0.0f };
+
+    UploadMesh(myMesh);
+}
+
+void VulkanBackend::UploadMesh(Mesh& mesh)
+{
+    VkBufferCreateInfo bufferInfo{};
+    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    bufferInfo.size = mesh.myVertices.size() * sizeof(Vertex);
+    bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+
+    VmaAllocationCreateInfo allocInfo = {};
+    allocInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+
+    VK_CHECK(vmaCreateBuffer(myAllocator, &bufferInfo, &allocInfo,
+        &mesh.myVertexBuffer.myBuffer,
+        &mesh.myVertexBuffer.myAllocation,
+        nullptr));
+
+    void* data;
+    vmaMapMemory(myAllocator, mesh.myVertexBuffer.myAllocation, &data);
+
+    memcpy(data, mesh.myVertices.data(), mesh.myVertices.size() * sizeof(Vertex));
+
+    vmaUnmapMemory(myAllocator, mesh.myVertexBuffer.myAllocation);
+}
+
 void VulkanBackend::Render()
 {
     VK_CHECK(vkWaitForFences(myDevice, 1, &myRenderFence, true, 1000000000));
@@ -373,6 +437,11 @@ void VulkanBackend::Render()
     vkCmdBeginRenderPass(cmd, &beginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, myTrianglePipeline);
+
+    //bind the mesh vertex buffer with offset 0
+    VkDeviceSize offset = 0;
+    vkCmdBindVertexBuffers(cmd, 0, 1, &myMesh.myVertexBuffer.myBuffer, &offset);
+
     vkCmdDraw(cmd, 3, 1, 0, 0);
 
     vkCmdEndRenderPass(cmd);

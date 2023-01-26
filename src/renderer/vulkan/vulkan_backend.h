@@ -3,6 +3,7 @@
 #include <odyssey/types.h>
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
+#include <unordered_map>
 
 #include "renderer/renderer_backend.h"
 #include "VkBootstrap.h"
@@ -12,8 +13,38 @@
 
 struct MeshPushConstants
 {
-	Vec4 myData;
-	Mat4 myRenderMatrix;
+	Vec4 myData{};
+	Mat4 myRenderMatrix{};
+};
+
+struct Material
+{
+    VkPipeline myPipeline{};
+    VkPipelineLayout myPipelineLayout{};
+};
+
+struct RenderObject
+{
+    Mesh* myMesh{};
+    Material* myMaterial{};
+    glm::mat4 myTransformMatrix{};
+};
+
+class PipelineBuilder
+{
+public:
+    std::vector<VkPipelineShaderStageCreateInfo> myShaderStages;
+    VkPipelineVertexInputStateCreateInfo myVertexInputInfo;
+    VkPipelineInputAssemblyStateCreateInfo myInputAssembly;
+    VkViewport myViewport;
+    VkRect2D myScissor;
+    VkPipelineRasterizationStateCreateInfo myRasterizer;
+    VkPipelineColorBlendAttachmentState myColorBlendAttachment;
+    VkPipelineMultisampleStateCreateInfo myMultisampling;
+    VkPipelineLayout myPipelineLayout;
+    VkPipelineDepthStencilStateCreateInfo myDepthStencil;
+
+    VkPipeline BuildPipeline(VkDevice device, VkRenderPass pass) const;
 };
 
 class VulkanBackend final : public RendererBackend
@@ -34,7 +65,15 @@ public:
     void InitFramebuffers(const RendererBackendConfig& config);
     void InitPipelines();
 
+    void InitScene();
+
     bool LoadShaderModule(const std::string& filePath, VkShaderModule* outShaderModule) const;
+
+    Material* CreateMaterial(VkPipeline pipeline, VkPipelineLayout layout, const std::string& name);
+    Material* GetMaterial(const std::string& name);
+    Mesh* GetMesh(const std::string& name);
+
+    void DrawObjects(VkCommandBuffer cmd, RenderObject* first, int count) const;
 
     void LoadMeshes();
     void UploadMesh(Mesh& mesh);
@@ -62,47 +101,36 @@ private:
     VmaAllocator myAllocator{};
 
     VkQueue myGraphicsQueue{};
-    uint32_t  myGraphicsQueueFamily{};
+    uint32_t myGraphicsQueueFamily{};
 
     VkCommandPool myCommandPool{};
     VkCommandBuffer myMainCommandBuffer{};
 
     VkRenderPass myRenderPass{};
-    Vector<VkFramebuffer> myFramebuffers;
+    Vector<VkFramebuffer> myFramebuffers{};
 
-    VkSemaphore myPresentSemaphore;
-    VkSemaphore myRenderSemaphore;
-    VkFence myRenderFence;
+    VkSemaphore myPresentSemaphore{};
+    VkSemaphore myRenderSemaphore{};
+    VkFence myRenderFence{};
 
-    VkExtent2D myWindowExtent;
+    VkExtent2D myWindowExtent{};
 
-    VkPipelineLayout myTrianglePipelineLayout;
 
-    VkPipeline myTrianglePipeline;
+    VkPipelineLayout myTrianglePipelineLayout{};
+
+    VkPipeline myTrianglePipeline{};
 
     Mesh myMesh{};
+
+    Vector<RenderObject> myRenderables;
+    std::unordered_map<std::string, Material> myMaterials;
+    std::unordered_map<std::string, Mesh> myMeshes;
+
 
     bool myIsInitialized = false;
 
     // TEMP
     int myFrameNumber = 0;
-};
-
-class PipelineBuilder
-{
-public:
-    std::vector<VkPipelineShaderStageCreateInfo> myShaderStages;
-    VkPipelineVertexInputStateCreateInfo myVertexInputInfo;
-    VkPipelineInputAssemblyStateCreateInfo myInputAssembly;
-    VkViewport myViewport;
-    VkRect2D myScissor;
-    VkPipelineRasterizationStateCreateInfo myRasterizer;
-    VkPipelineColorBlendAttachmentState myColorBlendAttachment;
-    VkPipelineMultisampleStateCreateInfo myMultisampling;
-    VkPipelineLayout myPipelineLayout;
-    VkPipelineDepthStencilStateCreateInfo myDepthStencil;
-
-    VkPipeline BuildPipeline(VkDevice device, VkRenderPass pass) const;
 };
 
 namespace PlatformLayer

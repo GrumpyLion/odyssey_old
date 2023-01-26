@@ -55,6 +55,10 @@ private:
     Vector<VkImage> mySwapchainImages{};
     Vector<VkImageView> mySwapchainImageViews{};
 
+    VkImageView myDepthImageView{};
+    AllocatedImage myDepthImage{};
+    VkFormat myDepthFormat{};
+
     VmaAllocator myAllocator{};
 
     VkQueue myGraphicsQueue{};
@@ -78,8 +82,6 @@ private:
 
     Mesh myMesh{};
 
-    VkPipelineLayout myMeshPipelineLayout;
-
     bool myIsInitialized = false;
 
     // TEMP
@@ -98,6 +100,7 @@ public:
     VkPipelineColorBlendAttachmentState myColorBlendAttachment;
     VkPipelineMultisampleStateCreateInfo myMultisampling;
     VkPipelineLayout myPipelineLayout;
+    VkPipelineDepthStencilStateCreateInfo myDepthStencil;
 
     VkPipeline BuildPipeline(VkDevice device, VkRenderPass pass) const;
 };

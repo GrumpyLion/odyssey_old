@@ -25,4 +25,6 @@ struct Mesh
 {
 	Vector<Vertex> myVertices;
 	AllocatedBuffer myVertexBuffer;
+
+	bool LoadFromObj(const String& filename);
 };

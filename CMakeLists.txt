@@ -35,6 +35,7 @@ include_directories(
     ${ODYSSEY_PATH}/extern/glfw/include
     ${ODYSSEY_PATH}/extern/spdlog/include
     ${ODYSSEY_PATH}/extern/vma/include
+    ${ODYSSEY_PATH}/extern/tinyobjloader
     ${ODYSSEY_PATH}/extern/glm
     ${ODYSSEY_PATH}/extern/imgui
     ${ODYSSEY_PATH}/extern/vkbootstrap

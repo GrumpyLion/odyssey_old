@@ -47,8 +47,6 @@ VulkanBackend::~VulkanBackend()
 
     vmaDestroyBuffer(myAllocator, myMesh.myVertexBuffer.myBuffer, myMesh.myVertexBuffer.myAllocation);
 
-    vmaDestroyAllocator(myAllocator);
-
     vkDestroyPipeline(myDevice, myTrianglePipeline, nullptr);
     vkDestroyPipelineLayout(myDevice, myTrianglePipelineLayout, nullptr);
 
@@ -57,6 +55,9 @@ VulkanBackend::~VulkanBackend()
     vkDestroyFence(myDevice, myRenderFence, nullptr);
 
     vkDestroyCommandPool(myDevice, myCommandPool, nullptr);
+
+    vmaDestroyImage(myAllocator, myDepthImage.myImage, myDepthImage.myAllocation);
+    vkDestroyImageView(myDevice, myDepthImageView, nullptr);
 
     vkDestroySwapchainKHR(myDevice, mySwapchain, nullptr);
     vkDestroyRenderPass(myDevice, myRenderPass, nullptr);
@@ -67,7 +68,9 @@ VulkanBackend::~VulkanBackend()
         vkDestroyImageView(myDevice, mySwapchainImageViews[i], nullptr);
     }
 
-    vkDestroyDevice(myDevice, nullptr);
+    vmaDestroyAllocator(myAllocator);
+
+	vkDestroyDevice(myDevice, nullptr);
     vkDestroySurfaceKHR(myInstance, mySurface, nullptr);
 #if IS_DEBUG
     vkb::destroy_debug_utils_messenger(myInstance, myDebugMessenger);
@@ -83,14 +86,14 @@ bool VulkanBackend::Initialize(const RendererBackendConfig& config)
     if (!CreateDevice())
         return false;
 
-    if (!CreateSwapchain(config))
-        return false;
-
     VmaAllocatorCreateInfo allocatorInfo{};
     allocatorInfo.device = myDevice;
     allocatorInfo.physicalDevice = myPhysicalDevice;
     allocatorInfo.instance = myInstance;
     vmaCreateAllocator(&allocatorInfo, &myAllocator);
+
+    if (!CreateSwapchain(config))
+        return false;
 
     InitCommands();
     InitDefaultRenderPass();
@@ -208,6 +211,27 @@ bool VulkanBackend::CreateSwapchain(const RendererBackendConfig& config)
     myWindowExtent.width = config.myWidth;
     myWindowExtent.height = config.myHeight;
 
+    VkExtent3D depthImageExtent = {
+        myWindowExtent.width,
+        myWindowExtent.height,
+        1
+    };
+
+    //hardcoding the depth format to 32 bit float
+    myDepthFormat = VK_FORMAT_D32_SFLOAT;
+
+    VkImageCreateInfo depthImageInfo = VulkanInit::ImageCreateInfo(myDepthFormat, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, depthImageExtent);
+
+    VmaAllocationCreateInfo allocInfo{};
+    allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+    allocInfo.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+    vmaCreateImage(myAllocator, &depthImageInfo, &allocInfo, &myDepthImage.myImage, &myDepthImage.myAllocation, nullptr);
+
+    VkImageViewCreateInfo depthImageViewInfo = VulkanInit::ImageViewCreateInfo(myDepthFormat, myDepthImage.myImage, VK_IMAGE_ASPECT_DEPTH_BIT);
+
+    VK_CHECK(vkCreateImageView(myDevice, &depthImageViewInfo, nullptr, &myDepthImageView));
+
     return true;
 }
 
@@ -222,31 +246,68 @@ void VulkanBackend::InitCommands()
 
 void VulkanBackend::InitDefaultRenderPass()
 {
-    VkAttachmentDescription colorAttachmentDesc{};
-    colorAttachmentDesc.format = mySwapchainImageFormat;
-    colorAttachmentDesc.samples = VK_SAMPLE_COUNT_1_BIT;
-    colorAttachmentDesc.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    colorAttachmentDesc.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    colorAttachmentDesc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    colorAttachmentDesc.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    colorAttachmentDesc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    colorAttachmentDesc.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    VkAttachmentDescription colorAttachment{};
+    colorAttachment.format = mySwapchainImageFormat;
+    colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
     VkAttachmentReference colorAttachmentRef{};
     colorAttachmentRef.attachment = 0;
     colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
+    VkAttachmentDescription depthAttachment{};
+    depthAttachment.flags = 0;
+    depthAttachment.format = myDepthFormat;
+    depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+    VkAttachmentReference depthAttachmentRef{};
+    depthAttachmentRef.attachment = 1;
+    depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
     VkSubpassDescription subpassDesc{};
     subpassDesc.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
     subpassDesc.colorAttachmentCount = 1;
     subpassDesc.pColorAttachments = &colorAttachmentRef;
+    subpassDesc.pDepthStencilAttachment = &depthAttachmentRef;
+
+    VkSubpassDependency dependency{};
+    dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+    dependency.dstSubpass = 0;
+    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.srcAccessMask = 0;
+    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+    VkSubpassDependency depthDependency = {};
+    depthDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+    depthDependency.dstSubpass = 0;
+    depthDependency.srcStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+    depthDependency.srcAccessMask = 0;
+    depthDependency.dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+    depthDependency.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+
+    VkAttachmentDescription attachments[2] = { colorAttachment, depthAttachment };
+    VkSubpassDependency dependencies[2] = { dependency, depthDependency };
 
     VkRenderPassCreateInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    renderPassInfo.attachmentCount = 1;
-    renderPassInfo.pAttachments = &colorAttachmentDesc;
+    renderPassInfo.attachmentCount = 2;
+    renderPassInfo.pAttachments = attachments;
     renderPassInfo.subpassCount = 1;
     renderPassInfo.pSubpasses = &subpassDesc;
+    renderPassInfo.dependencyCount = 2;
+    renderPassInfo.pDependencies = dependencies;
 
     VK_CHECK(vkCreateRenderPass(myDevice, &renderPassInfo, nullptr, &myRenderPass));
 }
@@ -268,7 +329,12 @@ void VulkanBackend::InitFramebuffers(const RendererBackendConfig& config)
 
     for (u32 i = 0; i < swapchainImageCount; ++i)
     {
-        fbInfo.pAttachments = &mySwapchainImageViews[i];
+        VkImageView attachments[2];
+        attachments[0] = mySwapchainImageViews[i];
+        attachments[1] = myDepthImageView;
+
+        fbInfo.attachmentCount = 2;
+        fbInfo.pAttachments = attachments;
         VK_CHECK(vkCreateFramebuffer(myDevice, &fbInfo, nullptr, &myFramebuffers[i]));
     }
 }
@@ -338,6 +404,7 @@ void VulkanBackend::InitPipelines()
     pipelineBuilder.myMultisampling = VulkanInit::MultisamplingStateCreateInfo();
     pipelineBuilder.myColorBlendAttachment = VulkanInit::ColorBlendAttachmentState();
     pipelineBuilder.myPipelineLayout = myTrianglePipelineLayout;
+    pipelineBuilder.myDepthStencil = VulkanInit::DepthStencilCreateInfo(true, true, VK_COMPARE_OP_LESS_OR_EQUAL);
 
     myTrianglePipeline = pipelineBuilder.BuildPipeline(myDevice, myRenderPass);
 
@@ -375,15 +442,9 @@ bool VulkanBackend::LoadShaderModule(const std::string& filePath, VkShaderModule
 
 void VulkanBackend::LoadMeshes()
 {
-    myMesh.myVertices.resize(3);
+    const std::string binPath = PlatformLayer::GetBinPath();
 
-    myMesh.myVertices[0].myPosition = { 1.f, 1.f, 0.0f };
-    myMesh.myVertices[1].myPosition = { -1.f, 1.f, 0.0f };
-    myMesh.myVertices[2].myPosition = { 0.f,-1.f, 0.0f };
-
-    myMesh.myVertices[0].myColor = { 0.f, 1.f, 0.0f };
-    myMesh.myVertices[1].myColor = { 0.f, 1.f, 0.0f };
-    myMesh.myVertices[2].myColor = { 0.f, 1.f, 0.0f };
+    myMesh.LoadFromObj(binPath + "/../odyssey/assets_src/meshes/test/monkey_flat.obj");
 
     UploadMesh(myMesh);
 }
@@ -429,9 +490,13 @@ void VulkanBackend::Render()
 
     VK_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo));
 
-    VkClearValue clearValue{};
+    VkClearValue clearColorValue{};
     float flash = abs(sin(myFrameNumber / 120.0f));
-    clearValue.color = { { 0.0f, 0.0f, flash, 1.0f} };
+    clearColorValue.color = { { 0.0f, 0.0f, flash, 1.0f} };
+
+    VkClearValue clearDepthValue{};
+    clearDepthValue.depthStencil.depth = 1.0f;
+
     VkRenderPassBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     beginInfo.renderPass = myRenderPass;
@@ -440,8 +505,10 @@ void VulkanBackend::Render()
     beginInfo.renderArea.extent = myWindowExtent;
     beginInfo.framebuffer = myFramebuffers[swapchainImageIndex];
 
-    beginInfo.clearValueCount = 1;
-    beginInfo.pClearValues = &clearValue;
+    VkClearValue clearValues[] = { clearColorValue, clearDepthValue };
+
+    beginInfo.clearValueCount = 2;
+    beginInfo.pClearValues = clearValues;
 
     vkCmdBeginRenderPass(cmd, &beginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
@@ -461,7 +528,7 @@ void VulkanBackend::Render()
     MeshPushConstants constants{};
     constants.myRenderMatrix = mesh_matrix;
     vkCmdPushConstants(cmd, myTrianglePipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPushConstants), &constants);
-    vkCmdDraw(cmd, 3, 1, 0, 0);
+    vkCmdDraw(cmd, static_cast<uint32_t>(myMesh.myVertices.size()), 1, 0, 0);
 
     vkCmdEndRenderPass(cmd);
 
@@ -528,6 +595,7 @@ VkPipeline PipelineBuilder::BuildPipeline(VkDevice device, VkRenderPass pass) co
     pipelineInfo.renderPass = pass;
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+    pipelineInfo.pDepthStencilState = &myDepthStencil;
 
     VkPipeline newPipeline{};
     if (vkCreateGraphicsPipelines(

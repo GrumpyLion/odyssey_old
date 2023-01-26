@@ -10,6 +10,12 @@
 
 struct AllocatedBuffer
 {
-    VkBuffer myBuffer;
-    VmaAllocation myAllocation;
+    VkBuffer myBuffer{};
+    VmaAllocation myAllocation{};
+};
+
+struct AllocatedImage
+{
+    VkImage myImage{};
+    VmaAllocation myAllocation{};
 };

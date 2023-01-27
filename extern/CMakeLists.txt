@@ -4,4 +4,6 @@ endif()
 
 add_subdirectory(glm)
 add_subdirectory(imgui)
-add_subdirectory(vkbootstrap)
+if (USE_VULKAN)
+    add_subdirectory(vkbootstrap)
+endif()

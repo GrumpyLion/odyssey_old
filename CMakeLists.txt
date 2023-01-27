@@ -48,34 +48,32 @@ file(GLOB_RECURSE GLSL_SOURCE_FILES
     "${ODYSSEY_PATH}/assets_src/shaders/*.comp"
     )
 
-foreach(GLSL ${GLSL_SOURCE_FILES})
-  message(STATUS "BUILDING SHADER")
-  get_filename_component(FILE_NAME ${GLSL} NAME)
-  set(SPIRV "${ODYSSEY_PATH}/assets/shaders/${FILE_NAME}.spv")
-  message(STATUS ${GLSL})
-  ##execute glslang command to compile that specific shader
-  add_custom_command(
-    OUTPUT ${SPIRV}
-    COMMAND ${GLSL_VALIDATOR} -V ${GLSL} -o ${SPIRV}
-    DEPENDS ${GLSL})
-  list(APPEND SPIRV_BINARY_FILES ${SPIRV})
-endforeach(GLSL)
+if (USE_VULKAN)
+    foreach(GLSL ${GLSL_SOURCE_FILES})
+        message(STATUS "BUILDING SHADER")
+        get_filename_component(FILE_NAME ${GLSL} NAME)
+        set(SPIRV "${ODYSSEY_PATH}/assets/shaders/${FILE_NAME}.spv")
+        message(STATUS ${GLSL})
+        ##execute glslang command to compile that specific shader
+        add_custom_command(
+            OUTPUT ${SPIRV}
+            COMMAND ${GLSL_VALIDATOR} -V ${GLSL} -o ${SPIRV}
+            DEPENDS ${GLSL})
+        list(APPEND SPIRV_BINARY_FILES ${SPIRV})
+    endforeach(GLSL)
 
-add_custom_target(
-    shaders 
-    DEPENDS ${SPIRV_BINARY_FILES}
-    )
+    add_custom_target(
+        shaders 
+        DEPENDS ${SPIRV_BINARY_FILES}
+        )
+endif()
 
 set(SOURCES
     "src/core/engine.cpp"
     "src/core/logger.cpp"
 
     "src/renderer/renderer_frontend.cpp"
-
-    "src/renderer/vulkan/vulkan_backend.cpp"
-    "src/renderer/vulkan/vulkan_initializers.cpp"
-    "src/renderer/vulkan/vulkan_mesh.cpp"
-
+    
     )
 
 set(HEADERS
@@ -95,13 +93,27 @@ set(HEADERS
     "src/renderer/renderer_backend.h"
     "src/renderer/renderer_frontend.h"
 
-    "src/renderer/vulkan/vulkan_backend.h"
-    "src/renderer/vulkan/vulkan_types.h"
-    "src/renderer/vulkan/vulkan_initializers.h"
-    "src/renderer/vulkan/vulkan_mesh.h"
-
     "src/resources/resource_types.h"
     )
+
+if (USE_VULKAN)
+    add_definitions(-DUSE_VULKAN=1)
+
+    set(SOURCES ${SOURCES}
+        "src/renderer/vulkan/vulkan_backend.cpp"
+        "src/renderer/vulkan/vulkan_initializers.cpp"
+        "src/renderer/vulkan/vulkan_mesh.cpp"
+    )
+
+    set(HEADERS ${HEADERS}
+        "src/renderer/vulkan/vulkan_backend.h"
+        "src/renderer/vulkan/vulkan_types.h"
+        "src/renderer/vulkan/vulkan_initializers.h"
+        "src/renderer/vulkan/vulkan_mesh.h"
+    )
+else()
+    add_definitions(-DUSE_VULKAN=0)
+endif()
 
 if (IS_WINDOWS)
     add_definitions(-DIS_WINDOWS_PLATFORM=1)

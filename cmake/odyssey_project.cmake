@@ -45,22 +45,6 @@ if (MSVC)
 
 	add_definitions(-D_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS)
 	add_definitions(-D_ENABLE_EXTENDED_ALIGNED_STORAGE)
-else()
-	if ((NOT EMSCRIPTEN) AND (NOT ANDROID_NDK))
-		set(EXTRA_LIBS pthread)
-	endif()
-	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_DEBUG")
-
-	if (${CMAKE_CXX_COMPILER_ID} STREQUAL GNU) 
-		if (HALLEY_ENABLE_STATIC_STDLIB)
-			set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -static-libgcc")
-			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libgcc -static-libstdc++")
-		endif()
-
-		# These are needed for DLLs built on GCC
-		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
-	endif()
 endif()
 
 
@@ -92,18 +76,6 @@ set(ODYSSEY_PROJECT_INCLUDE_DIRS
     $ENV{VK_SDK_PATH}/Include
     )
 
-set(ODYSSEY_PROJECT_LIBS
-	optimized odyssey
-	optimized imgui
-	optimized vulkan-1
-	optimized vkbootstrap
-
-	debug odyssey_d
-	debug imgui_d
-	debug vkbootstrap_d
-	debug vulkan-1
-	)
-
 set(ODYSSEY_PROJECT_LIB_DIRS
 	${ODYSSEY_PATH}/lib
 	$ENV{VK_SDK_PATH}/Lib
@@ -116,7 +88,7 @@ function(odysseyProject name sources headers proj_resources genDefinitions targe
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${targetDir})
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO ${targetDir})
 
-    add_subdirectory(odyssey)
+	add_subdirectory(${ODYSSEY_PATH} odyssey)
 
 	set(proj_sources ${sources})
 	set(proj_headers ${headers} ${genDefinitions})
@@ -128,8 +100,11 @@ function(odysseyProject name sources headers proj_resources genDefinitions targe
 	SET(LINK_LIBRARIES "")
     SET(LINK_LIBRARIES ${LINK_LIBRARIES} odyssey)
     SET(LINK_LIBRARIES ${LINK_LIBRARIES} imgui)
-    SET(LINK_LIBRARIES ${LINK_LIBRARIES} vkbootstrap)
-	SET(LINK_LIBRARIES ${LINK_LIBRARIES} ${ODYSSEY_PROJECT_LIBS})
+	
+	if (USE_VULKAN)
+	    SET(LINK_LIBRARIES ${LINK_LIBRARIES} vulkan-1)
+	    SET(LINK_LIBRARIES ${LINK_LIBRARIES} vkbootstrap)
+	endif()
 
     if (USE_GLFW)
         SET(LINK_LIBRARIES ${LINK_LIBRARIES} glfw)

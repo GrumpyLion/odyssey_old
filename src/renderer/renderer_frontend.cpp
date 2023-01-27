@@ -17,9 +17,11 @@ bool RendererFrontend::Initialize(int width, int height)
     config.myApplicationName = "test";
     config.myWidth = width;
     config.myHeight = height;
-    locBackend = new VulkanBackend();
+#if USE_VULKAN
+	locBackend = new VulkanBackend();
     locBackend->Initialize(config);
-    return true;    
+#endif
+	return true;    
 }
 
 bool RendererFrontend::Render()

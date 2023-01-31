@@ -50,11 +50,14 @@ VulkanBackend::~VulkanBackend()
     vkDestroyPipeline(myDevice, myTrianglePipeline, nullptr);
     vkDestroyPipelineLayout(myDevice, myTrianglePipelineLayout, nullptr);
 
-    vkDestroySemaphore(myDevice, myPresentSemaphore, nullptr);
-    vkDestroySemaphore(myDevice, myRenderSemaphore, nullptr);
-    vkDestroyFence(myDevice, myRenderFence, nullptr);
-
-    vkDestroyCommandPool(myDevice, myCommandPool, nullptr);
+    for (int i = 0; i < FRAME_OVERLAP; ++i)
+    {
+        const FrameData& frame = myFrames[i];
+        vkDestroySemaphore(myDevice, frame.myPresentSemaphore, nullptr);
+        vkDestroySemaphore(myDevice, frame.myRenderSemaphore, nullptr);
+        vkDestroyFence(myDevice, frame.myRenderFence, nullptr);
+        vkDestroyCommandPool(myDevice, frame.myCommandPool, nullptr);
+    }
 
     vmaDestroyImage(myAllocator, myDepthImage.myImage, myDepthImage.myAllocation);
     vkDestroyImageView(myDevice, myDepthImageView, nullptr);
@@ -98,7 +101,7 @@ bool VulkanBackend::Initialize(const RendererBackendConfig& config)
     InitCommands();
     InitDefaultRenderPass();
     InitFramebuffers(config);
-    InitStructures();
+    InitSyncStructures();
     InitPipelines();
 
     LoadMeshes();
@@ -110,19 +113,18 @@ bool VulkanBackend::Initialize(const RendererBackendConfig& config)
     return true;
 }
 
-void VulkanBackend::InitStructures()
+void VulkanBackend::InitSyncStructures()
 {
-    VkFenceCreateInfo fenceCreateInfo{};
-    fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+    const VkFenceCreateInfo fenceInfo = VulkanInit::FenceCreateInfo(VK_FENCE_CREATE_SIGNALED_BIT);
+    const VkSemaphoreCreateInfo semaphoreInfo = VulkanInit::SemaphoreCreateInfo();
 
-    VK_CHECK(vkCreateFence(myDevice, &fenceCreateInfo, nullptr, &myRenderFence));
-
-    VkSemaphoreCreateInfo semaphoreCreateInfo{};
-    semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-    
-    VK_CHECK(vkCreateSemaphore(myDevice, &semaphoreCreateInfo, nullptr, &myPresentSemaphore));
-    VK_CHECK(vkCreateSemaphore(myDevice, &semaphoreCreateInfo, nullptr, &myRenderSemaphore));
+    for (int i = 0; i < FRAME_OVERLAP; ++i)
+    {
+        FrameData& frame = myFrames[i];
+        VK_CHECK(vkCreateFence(myDevice, &fenceInfo, nullptr, &frame.myRenderFence));
+        VK_CHECK(vkCreateSemaphore(myDevice, &semaphoreInfo, nullptr, &frame.myPresentSemaphore));
+        VK_CHECK(vkCreateSemaphore(myDevice, &semaphoreInfo, nullptr, &frame.myRenderSemaphore));
+    }
 }
 
 bool VulkanBackend::CreateInstance()
@@ -240,10 +242,15 @@ bool VulkanBackend::CreateSwapchain(const RendererBackendConfig& config)
 void VulkanBackend::InitCommands()
 {
     const VkCommandPoolCreateInfo createInfo = VulkanInit::CommandPoolCreateInfo(myGraphicsQueueFamily, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
-    VK_CHECK(vkCreateCommandPool(myDevice, &createInfo, nullptr, &myCommandPool));
 
-    VkCommandBufferAllocateInfo allocInfo = VulkanInit::CommandBufferAllocateBuffer(myCommandPool);
-    VK_CHECK(vkAllocateCommandBuffers(myDevice, &allocInfo, &myMainCommandBuffer));
+
+    for (int i = 0; i < FRAME_OVERLAP; ++i)
+    {
+        VK_CHECK(vkCreateCommandPool(myDevice, &createInfo, nullptr, &myFrames[i].myCommandPool));
+
+        VkCommandBufferAllocateInfo allocInfo = VulkanInit::CommandBufferAllocateBuffer(myFrames[i].myCommandPool);
+        VK_CHECK(vkAllocateCommandBuffers(myDevice, &allocInfo, &myFrames[i].myMainCommandBuffer));
+    }
 }
 
 void VulkanBackend::InitDefaultRenderPass()
@@ -559,15 +566,15 @@ void VulkanBackend::UploadMesh(Mesh& mesh)
 
 void VulkanBackend::Render()
 {
-    VK_CHECK(vkWaitForFences(myDevice, 1, &myRenderFence, true, 1000000000));
-    VK_CHECK(vkResetFences(myDevice, 1, &myRenderFence));
+    VK_CHECK(vkWaitForFences(myDevice, 1, &GetCurrentFrame().myRenderFence, true, 1000000000));
+    VK_CHECK(vkResetFences(myDevice, 1, &GetCurrentFrame().myRenderFence));
 
     uint32_t swapchainImageIndex = 0;
-    VK_CHECK(vkAcquireNextImageKHR(myDevice, mySwapchain, 1000000000, myPresentSemaphore, nullptr, &swapchainImageIndex));
+    VK_CHECK(vkAcquireNextImageKHR(myDevice, mySwapchain, 1000000000, GetCurrentFrame().myPresentSemaphore, nullptr, &swapchainImageIndex));
 
-    VK_CHECK(vkResetCommandBuffer(myMainCommandBuffer, 0));
+    VK_CHECK(vkResetCommandBuffer(GetCurrentFrame().myMainCommandBuffer, 0));
 
-    VkCommandBuffer cmd = myMainCommandBuffer;
+    VkCommandBuffer cmd = GetCurrentFrame().myMainCommandBuffer;
 
     VkCommandBufferBeginInfo cmdBeginInfo{};
     cmdBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -609,25 +616,30 @@ void VulkanBackend::Render()
     VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     submit.pWaitDstStageMask = &waitStage;
     submit.waitSemaphoreCount = 1;
-    submit.pWaitSemaphores = &myPresentSemaphore;
+    submit.pWaitSemaphores = &GetCurrentFrame().myPresentSemaphore;
     submit.signalSemaphoreCount = 1;
-    submit.pSignalSemaphores = &myRenderSemaphore;
+    submit.pSignalSemaphores = &GetCurrentFrame().myRenderSemaphore;
     submit.commandBufferCount = 1;
     submit.pCommandBuffers = &cmd;
 
-    VK_CHECK(vkQueueSubmit(myGraphicsQueue, 1, &submit, myRenderFence));
+    VK_CHECK(vkQueueSubmit(myGraphicsQueue, 1, &submit, GetCurrentFrame().myRenderFence));
 
     VkPresentInfoKHR presentInfo{};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     presentInfo.pSwapchains = &mySwapchain;
     presentInfo.swapchainCount = 1;
-    presentInfo.pWaitSemaphores = &myRenderSemaphore;
+    presentInfo.pWaitSemaphores = &GetCurrentFrame().myRenderSemaphore;
     presentInfo.waitSemaphoreCount = 1;
     presentInfo.pImageIndices = &swapchainImageIndex;
 
     VK_CHECK(vkQueuePresentKHR(myGraphicsQueue, &presentInfo));
 
     myFrameNumber++;
+}
+
+FrameData& VulkanBackend::GetCurrentFrame()
+{
+    return myFrames[myFrameNumber % FRAME_OVERLAP];
 }
 
 VkPipeline PipelineBuilder::BuildPipeline(VkDevice device, VkRenderPass pass) const

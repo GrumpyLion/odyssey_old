@@ -11,6 +11,8 @@
 
 // TODO some of this stuff needs to be moved out
 
+constexpr uint32_t FRAME_OVERLAP = 2;
+
 struct MeshPushConstants
 {
 	Vec4 myData{};
@@ -47,6 +49,15 @@ public:
     VkPipeline BuildPipeline(VkDevice device, VkRenderPass pass) const;
 };
 
+struct FrameData
+{
+    VkSemaphore myPresentSemaphore, myRenderSemaphore;
+    VkFence myRenderFence;
+
+    VkCommandPool myCommandPool;
+    VkCommandBuffer myMainCommandBuffer;
+};
+
 class VulkanBackend final : public RendererBackend
 {
 public:
@@ -54,7 +65,7 @@ public:
     ~VulkanBackend() override;
 
     bool Initialize(const RendererBackendConfig& config) override;
-    void InitStructures();
+    void InitSyncStructures();
 
     bool CreateInstance();
     bool CreateDevice();
@@ -81,6 +92,9 @@ public:
     void Render() override;
 
 private:
+    bool myIsInitialized = false;
+    int myFrameNumber = 0;
+
     vkb::Instance myVKBInstance{};
     VkInstance myInstance{};
     VkSurfaceKHR mySurface{};
@@ -103,34 +117,23 @@ private:
     VkQueue myGraphicsQueue{};
     uint32_t myGraphicsQueueFamily{};
 
-    VkCommandPool myCommandPool{};
-    VkCommandBuffer myMainCommandBuffer{};
-
     VkRenderPass myRenderPass{};
     Vector<VkFramebuffer> myFramebuffers{};
 
-    VkSemaphore myPresentSemaphore{};
-    VkSemaphore myRenderSemaphore{};
-    VkFence myRenderFence{};
-
     VkExtent2D myWindowExtent{};
 
-
-    VkPipelineLayout myTrianglePipelineLayout{};
-
-    VkPipeline myTrianglePipeline{};
-
-    Mesh myMesh{};
+    FrameData myFrames[FRAME_OVERLAP];
+    FrameData& GetCurrentFrame();
 
     Vector<RenderObject> myRenderables;
-    std::unordered_map<std::string, Material> myMaterials;
+
+    // TODO move this?
+    VkPipelineLayout myTrianglePipelineLayout{};
+    VkPipeline myTrianglePipeline{};
+    Mesh myMesh{};
+
+	std::unordered_map<std::string, Material> myMaterials;
     std::unordered_map<std::string, Mesh> myMeshes;
-
-
-    bool myIsInitialized = false;
-
-    // TEMP
-    int myFrameNumber = 0;
 };
 
 namespace PlatformLayer

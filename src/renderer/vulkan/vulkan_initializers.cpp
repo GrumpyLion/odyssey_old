@@ -2,24 +2,23 @@
 
 VkCommandPoolCreateInfo VulkanInit::CommandPoolCreateInfo(uint32_t queueFamilyIndex, VkCommandPoolCreateFlags flags)
 {
-    VkCommandPoolCreateInfo createInfo{};
-    createInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    createInfo.pNext = nullptr;
-    createInfo.queueFamilyIndex = queueFamilyIndex;
-    createInfo.flags = flags;
-
-    return createInfo;
+    VkCommandPoolCreateInfo info{};
+    info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    info.pNext = nullptr;
+    info.queueFamilyIndex = queueFamilyIndex;
+    info.flags = flags;
+    return info;
 }
 
 VkCommandBufferAllocateInfo VulkanInit::CommandBufferAllocateBuffer(VkCommandPool pool, uint32_t count, VkCommandBufferLevel level)
 {
-    VkCommandBufferAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.pNext = nullptr;
-    allocInfo.commandPool = pool;
-    allocInfo.commandBufferCount = count;
-    allocInfo.level = level;
-    return allocInfo;
+    VkCommandBufferAllocateInfo info{};
+    info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    info.pNext = nullptr;
+    info.commandPool = pool;
+    info.commandBufferCount = count;
+    info.level = level;
+    return info;
 }
 
 VkPipelineShaderStageCreateInfo VulkanInit::PipelineShaderStageCreateInfo(VkShaderStageFlagBits stage, VkShaderModule shaderModule)
@@ -65,7 +64,6 @@ VkPipelineRasterizationStateCreateInfo VulkanInit::RasterizationStateCreateInfo(
     info.depthBiasConstantFactor = 0.0f;
     info.depthBiasClamp = 0.0f;
     info.depthBiasSlopeFactor = 0.0f;
-
     return info;
 }
 
@@ -107,7 +105,7 @@ VkPipelineLayoutCreateInfo VulkanInit::PipelineLayoutCreateInfo()
 
 VkImageCreateInfo VulkanInit::ImageCreateInfo(VkFormat format, VkImageUsageFlags usageFlags, VkExtent3D extent)
 {
-    VkImageCreateInfo info = { };
+    VkImageCreateInfo info{};
     info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 
     info.imageType = VK_IMAGE_TYPE_2D;
@@ -126,9 +124,8 @@ VkImageCreateInfo VulkanInit::ImageCreateInfo(VkFormat format, VkImageUsageFlags
 
 VkImageViewCreateInfo VulkanInit::ImageViewCreateInfo(VkFormat format, VkImage image, VkImageAspectFlags aspectFlags)
 {
-    VkImageViewCreateInfo info = {};
+    VkImageViewCreateInfo info{};
     info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-
     info.viewType = VK_IMAGE_VIEW_TYPE_2D;
     info.image = image;
     info.format = format;
@@ -137,15 +134,13 @@ VkImageViewCreateInfo VulkanInit::ImageViewCreateInfo(VkFormat format, VkImage i
     info.subresourceRange.baseArrayLayer = 0;
     info.subresourceRange.layerCount = 1;
     info.subresourceRange.aspectMask = aspectFlags;
-
     return info;
 }
 
 VkPipelineDepthStencilStateCreateInfo VulkanInit::DepthStencilCreateInfo(bool depthTest, bool depthWrite, VkCompareOp compareOp)
 {
-    VkPipelineDepthStencilStateCreateInfo info = {};
+    VkPipelineDepthStencilStateCreateInfo info{};
     info.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-
     info.depthTestEnable = depthTest ? VK_TRUE : VK_FALSE;
     info.depthWriteEnable = depthWrite ? VK_TRUE : VK_FALSE;
     info.depthCompareOp = depthTest ? compareOp : VK_COMPARE_OP_ALWAYS;
@@ -153,6 +148,21 @@ VkPipelineDepthStencilStateCreateInfo VulkanInit::DepthStencilCreateInfo(bool de
     info.minDepthBounds = 0.0f; // Optional
     info.maxDepthBounds = 1.0f; // Optional
     info.stencilTestEnable = VK_FALSE;
+    return info;
+}
 
+VkFenceCreateInfo VulkanInit::FenceCreateInfo(VkFenceCreateFlags flags)
+{
+    VkFenceCreateInfo info{};
+    info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    info.flags = flags;
+    return info;
+}
+
+VkSemaphoreCreateInfo VulkanInit::SemaphoreCreateInfo(VkSemaphoreCreateFlags flags)
+{
+    VkSemaphoreCreateInfo info{};
+    info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+	info.flags = flags;
     return info;
 }

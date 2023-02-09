@@ -166,3 +166,29 @@ VkSemaphoreCreateInfo VulkanInit::SemaphoreCreateInfo(VkSemaphoreCreateFlags fla
 	info.flags = flags;
     return info;
 }
+
+VkDescriptorSetLayoutBinding VulkanInit::DescriptorSetLayoutBinding(VkDescriptorType type, VkShaderStageFlags stageFlags, uint32_t binding)
+{
+    VkDescriptorSetLayoutBinding setbind{};
+    setbind.binding = binding;
+    setbind.descriptorCount = 1;
+    setbind.descriptorType = type;
+    setbind.pImmutableSamplers = nullptr;
+    setbind.stageFlags = stageFlags;
+
+    return setbind;
+}
+
+VkWriteDescriptorSet VulkanInit::WriteDescriptorBuffer(VkDescriptorType type, VkDescriptorSet dstSet, VkDescriptorBufferInfo* bufferInfo, uint32_t binding)
+{
+    VkWriteDescriptorSet write{};
+    write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+
+    write.dstBinding = binding;
+    write.dstSet = dstSet;
+    write.descriptorCount = 1;
+    write.descriptorType = type;
+    write.pBufferInfo = bufferInfo;
+
+    return write;
+}

@@ -13,6 +13,22 @@
 
 constexpr uint32_t FRAME_OVERLAP = 2;
 
+struct GPUCameraData
+{
+    Mat4 myView;
+    Mat4 myProjection;
+    Mat4 myViewProjection;
+};
+
+struct GPUSceneData
+{
+    Vec4 myFogColor{};
+    Vec4 myFogDistances{};
+    Vec4 myAmbientColor{};
+    Vec4 mySunlightDirection{};
+    Vec4 mySunlightColor{};
+};
+
 struct MeshPushConstants
 {
 	Vec4 myData{};
@@ -56,6 +72,9 @@ struct FrameData
 
     VkCommandPool myCommandPool;
     VkCommandBuffer myMainCommandBuffer;
+
+    AllocatedBuffer myCameraBuffer;
+    VkDescriptorSet myGlobalDescriptor;
 };
 
 class VulkanBackend final : public RendererBackend
@@ -70,11 +89,13 @@ public:
     bool CreateInstance();
     bool CreateDevice();
     bool CreateSwapchain(const RendererBackendConfig& config);
+    AllocatedBuffer CreateBuffer(size_t size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage) const;
 
     void InitCommands();
     void InitDefaultRenderPass();
     void InitFramebuffers(const RendererBackendConfig& config);
     void InitPipelines();
+    void InitDescriptors();
 
     void InitScene();
 
@@ -83,8 +104,9 @@ public:
     Material* CreateMaterial(VkPipeline pipeline, VkPipelineLayout layout, const std::string& name);
     Material* GetMaterial(const std::string& name);
     Mesh* GetMesh(const std::string& name);
+    size_t PadUniformBufferSize(size_t originalSize) const;
 
-    void DrawObjects(VkCommandBuffer cmd, RenderObject* first, int count) const;
+    void DrawObjects(VkCommandBuffer cmd, RenderObject* first, int count);
 
     void LoadMeshes();
     void UploadMesh(Mesh& mesh);
@@ -102,6 +124,7 @@ private:
     VkPhysicalDevice myPhysicalDevice{};
     VkPhysicalDeviceProperties myPhysicalDeviceProperties{};
     VkDebugUtilsMessengerEXT myDebugMessenger{};
+    VkPhysicalDeviceProperties myGPUProperties{};
 
     VkSwapchainKHR mySwapchain{};
     VkFormat mySwapchainImageFormat{};
@@ -120,10 +143,16 @@ private:
     VkRenderPass myRenderPass{};
     Vector<VkFramebuffer> myFramebuffers{};
 
+    VkDescriptorSetLayout myGlobalSetLayout{};
+    VkDescriptorPool myDescriptorPool{};
+
     VkExtent2D myWindowExtent{};
 
     FrameData myFrames[FRAME_OVERLAP];
     FrameData& GetCurrentFrame();
+
+    GPUSceneData mySceneParameters{};
+    AllocatedBuffer mySceneParameterBuffer{};
 
     Vector<RenderObject> myRenderables;
 
